@@ -1,17 +1,16 @@
 // =====================================================================
 // Bench dock for a Waveshare 10.1" DSI touch panel on a Raspberry Pi.
 //
-// Rev E. One piece. The panel drops into a pocket from the front and a
-// surrounding lip rises BESIDE the glass - never over it - so the raw
-// glass edge is hidden without the opening ever becoming smaller than the
-// panel. That is what keeps it a single part: a frame that lapped onto
-// the glass could not be assembled, because the panel cannot enter from
-// the front and is far too big to pass through the Pi aperture behind.
+// Rev N. Two parts, body and cover - see "two parts" near the end. The
+// panel drops into a pocket from the front and a surrounding lip rises
+// BESIDE the glass - never over it - so the raw glass edge is hidden
+// without the opening ever becoming smaller than the panel.
 //
-// Assembly: VHB on the pocket floor, panel in face-up, done.
+// Assembly: cover off, panel and Pi in from the front, four M2.5 screws
+// into the tabs from behind, cover on with four M3.
 //
-// MEASURE THE PANEL BLOCK BEFORE PRINTING. Waveshare publish no outline
-// for WS-30052, only a DWG, so those numbers are estimates.
+//   openscad -D 'part="body"' -o rev-n-body.stl dock.scad   (and "cover",
+//   "coupon", "assembled") - then verify_dock.py and printcheck.py.
 // =====================================================================
 
 /* [Panel] 10.1-DSI-TOUCH-A (WS-30052), LANDSCAPE - rotated 90 from native.
@@ -107,12 +106,15 @@ flare     = 1.35;  // back curve: 1 = straight, higher flares later
 // would just leave five numbers that no longer drive anything and read as if
 // they do. The measurements they encoded are in the comment above and in
 // verify_dock.py, which checks the clearance for real.
-pi_w      = 101;   // still used: the bulkheads sit outboard of the Pi
+pi_shift  = 22.78; // Pi board centre, this far along the long axis from the glass centre
+pi_len    = 85;    // Pi 4B board length, lying along the long axis
 
 /* [Build] */
 wall      = 2.4;   // shell thickness; the body is hollow
 bulk      = 5;     // two internal bulkheads bracing the span
-split     = false; // true = one half only, for a bed narrower than dock_w
+bulk_z    = 75;    // bulkhead centres, each side of the middle. Was 60.5, which
+                   // put the right one 1.2 mm behind the panel straight through
+                   // the Pi board (it reaches pi_shift + pi_len/2 = 65.3).
 foot_d    = 22;    // adhesive foot recesses in the base
 foot_deep = 1.2;
 
@@ -131,6 +133,8 @@ assert(!speakers || 2 * spk_w + 20 < dock_w, "two drivers do not fit across the 
 tab_end = panel_t + tab_gap + tab_t;    // depth of the tab's rear face
 
 assert(frame_w >= 3.15, "frame_w below 3.15 - the offset flange opening breaks out through the side wall");
+assert(bulk_z - bulk / 2 >= pi_shift + pi_len / 2 + 5,
+       "bulkhead inside the Pi's footprint - the panel and Pi will not go in");
 assert(glass_t < front_t, "glass recess deeper than the front wall");
 
 function front_x(y) = (y - lip_h) * tan(lean);
@@ -235,9 +239,8 @@ module cavity() {
             linear_extrude(height = dock_w - 2 * wall)
                 offset(delta = -wall)
                     polygon(profile);
-        // Bulkheads sit OUTBOARD of the Pi aperture; one on the centreline
-        // would be cut in half by it, leaving two useless slivers.
-        for (z = [-(pi_w / 2 + 10), pi_w / 2 + 10])
+        // Bulkheads sit outboard of the Pi, and the cover screws into them.
+        for (z = [-bulk_z, bulk_z])
             translate([-50, -50, z - bulk / 2])
                 cube([base_d + 100, h_dock + 100, bulk]);
         front_backing();
@@ -261,13 +264,21 @@ module glass_recess() {
                  glass_w + 2 * glass_clear, corner_r);
 }
 
+// Half-height of the flange opening, measured up the face from its centre.
+// The cover/body split runs along its top edge.
+open_half_h = flange_h / 2 + open_clear_h;
+
 module flange_opening() {
     // flange is NOT centred on the glass - it sits flange_dx off along the
-    // long axis, and the mounting holes carry the same offset
+    // long axis, and the mounting holes carry the same offset.
+    //
+    // It stops at the tab faces. It used to run 12 mm deep, past them, and
+    // shaved every tab down to 2.5 mm with a 1.2 mm gap to the panel.
+    depth = panel_t + tab_gap;
     on_face(spk_zone + face_h / 2)
-        translate([front_t, 0, flange_dx])
-            rbox(front_t * 4,
-                 flange_h + 2 * open_clear_h,
+        translate([(depth - front_t) / 2, 0, flange_dx])
+            rbox(depth + front_t,
+                 2 * open_half_h,
                  flange_w + 2 * open_clear, corner_r);
 }
 
@@ -281,20 +292,49 @@ module tabs() {
     // non-manifold - 60 edges shared by 4 faces when I tried it.
     bite  = 1.0;
     reach = tab_end - front_t + bite;
-    for (dz = holes_dx) for (dy = holes_dz)
-        on_face(spk_zone + face_h / 2)
-            translate([0, dy, dz + flange_dx])
-                difference() {
-                    hull() {
-                        translate([front_t - bite, -reach / 2, 0])
-                            cube([eps * 2, tab_xy[1] + reach, tab_xy[0]], center = true);
-                        translate([tab_end - tab_t / 2, 0, 0])
-                            cube([tab_t, tab_xy[1], tab_xy[0]], center = true);
-                    }
-                    translate([tab_end - tab_t - 1, 0, 0])
-                        rotate([0, 90, 0])
-                            cylinder(h = tab_t + 2, d = hole_dia);
-                }
+    on_face(spk_zone + face_h / 2)
+        difference() {
+            union() {
+                // Bottom tabs: hulled down to the wall below the opening.
+                for (dz = holes_dx)
+                    translate([0, holes_dz[1], dz + flange_dx])
+                        hull() {
+                            translate([front_t - bite, -reach / 2, 0])
+                                cube([eps * 2, tab_xy[1] + reach, tab_xy[0]], center = true);
+                            translate([tab_end - tab_t / 2, 0, 0])
+                                cube([tab_t, tab_xy[1], tab_xy[0]], center = true);
+                        }
+                // Top tabs: the wall above the opening is the cover's now, so
+                // there is nothing to hull to - the webs carry them instead.
+                tab_webs();
+            }
+            for (dz = holes_dx) for (dy = holes_dz)
+                translate([tab_end - tab_t - 1, dy, dz + flange_dx])
+                    rotate([0, 90, 0])
+                        cylinder(h = tab_t + 2, d = hole_dia);
+        }
+}
+
+// The top tabs hang behind the opening, and the opening is where the panel
+// goes, so nothing can stand under them. Printed base-down, each one started
+// as a sliver in mid-air - Orca's "floating cantilever". A web runs from each
+// top tab out to the side wall with a 45 degree underside, so every layer of
+// the tab sits on the one below. It is behind the panel's rear face, in the
+// same plane as the tab, so it touches nothing the tab did not.
+module tab_webs() {
+    for (dz = holes_dx) {
+        zc   = dz + flange_dx;
+        side = sign(zc);
+        zw   = side * (dock_w / 2 - wall + 1);         // 1 mm into the side wall
+        run  = abs(zw - (zc - side * tab_xy[0] / 2));  // tab's inner edge to wall
+        y0   = holes_dz[0] - tab_xy[1] / 2;            // bottom of the top tab
+        hull() {
+            translate([tab_end - tab_t, y0, zc - tab_xy[0] / 2])
+                cube([tab_t, tab_xy[1], tab_xy[0]]);
+            translate([tab_end - tab_t, y0 - run, zw - eps])
+                cube([tab_t, tab_xy[1] + run, 2 * eps]);
+        }
+    }
 }
 
 // Adhesive foot recesses in the base, so the pads sit flush instead of
@@ -352,9 +392,13 @@ module base_vents() {
 cable_w    = 11.0;   // slot width - clears a USB-C overmould
 cable_neck = 6.0;    // pinch at the mouth; push past it and the cable stays
 cable_x    = 9.0;    // slot centre this far forward of the back edge
+cable_h    = 20.0;   // how far up the back the slot runs. Was 60, which split
+                     // the back curve most of the way up for no reason - a
+                     // cable lying on the bench needs a few mm. The base pocket
+                     // and the neck are untouched.
 
 module cable_exit() {
-    h = 60;                                   // taller than the base is thick
+    h = cable_h;
     translate([0, -eps, 0]) rotate([-90, 0, 0]) {
         // the pocket the cable sits in
         hull() {
@@ -369,23 +413,54 @@ module cable_exit() {
     }
 }
 
+// Zip-tie anchor: a bar arched over the pocket, just ahead of the neck.
+//
+// The neck alone holds the cable against a nudge, not a yank - a pull goes
+// straight through to the Pi's USB-C socket. Tied to this bar, the pull ends
+// at the dock.
+//
+// The cable lies across the top of the bar. The pocket under it is open to
+// the bench, so the tie feeds up from underneath, over the cable and back
+// down - it can be fitted or redone with the panel already screwed in.
+// Printed base-down the bar is a 14 mm bridge, which needs no support.
+tie_x   = 19.5;   // bar centre this far forward of the back edge
+tie_l   = 4.0;    // bar depth, front to back - a 4.8 mm tie wraps it
+tie_y   = 6.0;    // underside of the bar above the bench
+tie_t   = 3.0;    // bar thickness
+tie_leg = 4.0;    // pillar width, each side of the pocket
+
+assert(base_d - tie_x - tie_l / 2 > base_d * 0.30 + (vent_n - 1) * vent_p + vent_w / 2,
+       "tie anchor sits on the last base vent");
+assert(tie_y + tie_t + 4 < cable_h,
+       "cable over the tie bar sits higher than the slot through the back");
+
+module tie_anchor() {
+    z_in = cable_w / 2 + 1.5;                 // leave floor between pocket and leg
+    translate([base_d - tie_x - tie_l / 2, 0, 0]) {
+        for (s = [-1, 1])
+            translate([0, wall - 1, s > 0 ? z_in : -z_in - tie_leg])
+                cube([tie_l, tie_y + tie_t - wall + 1, tie_leg]);
+        translate([0, tie_y, -z_in - tie_leg])
+            cube([tie_l, tie_t, 2 * (z_in + tie_leg)]);
+    }
+}
+
 // A corner of the real thing, for 20 minutes of filament instead of 15 hours.
 //
 // Nothing here has ever been test-fitted: there are no calipers in the house,
 // so the recess depth, the opening clearance and the tab hole position are all
 // arithmetic. They are also the three things you cannot fix after printing.
-// This cuts the top-right corner out of the finished model - same recess, same
+// This cuts the bottom-right corner out of the body - same recess, same
 // opening edge, same tab and hole - so the panel's own corner either drops in
-// or it does not.
-//
-//   openscad -D coupon=true -o coupon.stl dock.scad
+// or it does not. It was the top-right corner until the top edge moved into
+// the cover; the bottom corner is all one part and stands on the real base.
 //
 // What it tells you, in the order worth checking:
 //   1. does the panel corner sit into the recess and finish flush
 //   2. does the flange pass the opening without forcing
 //   3. does an M2.5 screw line up with the tab hole
 // If 1 and 2 pass and 3 is close, print the body.
-coupon_at = [holes_dx[0], holes_dz[0]];   // the top-right mounting hole
+coupon_at = [holes_dx[0], holes_dz[1]];   // the bottom-right mounting hole
 coupon_xy = 56;                            // how much face to keep, square
 
 module coupon_block() {
@@ -441,31 +516,152 @@ module taper_block(inset = 0) {
         }
 }
 
-module dock() {
+// ---- two parts: body and cover ---------------------------------------
+// Rev M was one closed piece, and it could not be built or assembled:
+//
+//   - The panel screws to its tabs from BEHIND, and with the back closed
+//     nothing could reach them. The top two had 7 mm of air behind them.
+//   - Printed base-down, the edge above the screen was a ceiling 230 mm wide
+//     with nothing under it but the opening the panel goes into.
+//
+// So the back comes off. The cover is the curved back, the top, and the strip
+// of front face above the screen; the body is everything else - base, the
+// front below that strip, both side walls, the bulkheads and all four tabs.
+//
+//   body   prints base-down. The front is now a U, open at the top, so it has
+//          no ceiling anywhere except short bridges.
+//   cover  prints upside-down on its flat top. Every face then leans the
+//          right way, and the strip above the screen grows straight up off
+//          the plate.
+//
+// The cover sits between the two side walls, on the bulkhead edges and the
+// base, and four M3 screws hold it to bosses on the bulkheads. Off, the
+// whole back of the panel is open: tab screws, Pi, cables.
+fit       = 0.25;   // gap between cover and body, every face they share
+cover_screw_y = [28, 122];   // heights of the two screws on each bulkhead
+boss_d    = 8;      // boss around each screw
+boss_len  = 10;     // how far the boss reaches into the bulkhead
+pilot_d   = 2.5;    // M3 thread-forming pilot - the screw cuts its own thread
+clear_d   = 3.4;    // M3 clearance through the cover
+
+// The face's own frame, in 2D: x into the dock, y up the face.
+module on_face2d(d) {
+    translate([d * sin(lean), lip_h + d * cos(lean)])
+        rotate(-lean)
+            children();
+}
+
+// What the cover is, as a cross-section: the outer skin over the back and
+// top, plus the full-thickness front wall above the opening - minus the base
+// slab and the front wall below the opening, which stay with the body.
+module cover2d() {
     difference() {
         union() {
-            // Outer solid tapered, and the cavity tapered with it a wall
-            // further in - so the flank stays a wall, not an opening.
             difference() {
-                intersection() { body(); taper_block(); }
-                intersection() { cavity(); taper_block(wall); }
+                polygon(profile);
+                offset(delta = -wall) polygon(profile);
             }
-            if (use_tabs)
-                intersection() { tabs(); body(); taper_block(); }
+            intersection() {
+                polygon(profile);
+                on_face2d(spk_zone + face_h / 2)
+                    translate([0, open_half_h]) square([front_t, 100]);
+            }
         }
-        glass_recess();
-        flange_opening();
-        if (speakers) speaker_cut();
-        cable_exit();
-        base_vents();
-        feet();
-        if (split)
-            translate([-50, -50, -dock_w / 2 - eps])
-                cube([base_d + 100, h_dock + 100, dock_w / 2 + eps]);
+        translate([-100, -100]) square([base_d + 200, 100 + wall]);
+        // front_t + wall deep, not front_t: the toe's skin, below the face,
+        // reaches 4.03 in the face's frame and was left behind as a sliver
+        on_face2d(spk_zone + face_h / 2)
+            translate([-100, -400]) square([100 + front_t + wall, 400 + open_half_h]);
     }
 }
 
-coupon = false;   // -D coupon=true for the corner test piece
+// The cover region in 3D, between the side walls. `grow` swells it into the
+// body, `inset` holds it off the side walls - so the body subtracts a grown
+// one and the cover keeps an inset one, and `fit` is left between them.
+module cover_zone(grow, inset) {
+    intersection() {
+        translate([0, 0, -dock_w / 2])
+            linear_extrude(height = dock_w)
+                offset(delta = grow) cover2d();
+        taper_block(inset);
+    }
+}
 
-if (coupon) intersection() { dock(); coupon_block(); }
-else dock();
+function back_x(y) = top_back + run * pow(1 - y / h_dock, flare);
+
+module boss_axes() {
+    for (z = [-bulk_z, bulk_z]) for (y = cover_screw_y)
+        translate([back_x(y) - wall - boss_len, y, z])
+            children();
+}
+
+// Teardrop in section, point down, so it prints base-down without support.
+module cover_bosses() {
+    boss_axes()
+        hull() {
+            rotate([0, 90, 0]) cylinder(d = boss_d, h = boss_len + wall + 5);
+            translate([0, -boss_d / 2 * sqrt(2), -eps])
+                cube([boss_len + wall + 5, eps, 2 * eps]);
+        }
+}
+
+module cover_holes(d) {
+    boss_axes()
+        translate([-1, 0, 0])
+            rotate([0, 90, 0]) cylinder(d = d, h = boss_len + wall + 20);
+}
+
+module shell() {
+    // Outer solid tapered, and the cavity tapered with it a wall further
+    // in - so the flank stays a wall, not an opening.
+    difference() {
+        intersection() { body(); taper_block(); }
+        intersection() { cavity(); taper_block(wall); }
+    }
+}
+
+module dock_body() {
+    difference() {
+        union() {
+            shell();
+            intersection() {
+                union() { if (use_tabs) tabs(); cover_bosses(); }
+                body(); taper_block();
+            }
+            tie_anchor();
+        }
+        cover_zone(fit, wall);
+        glass_recess();
+        flange_opening();
+        if (speakers) speaker_cut();
+        // the bar spans the pocket, so the pocket must not cut it away
+        difference() { cable_exit(); tie_anchor(); }
+        base_vents();
+        feet();
+        cover_holes(pilot_d);
+    }
+}
+
+module dock_cover() {
+    difference() {
+        intersection() { shell(); cover_zone(0, wall + fit); }
+        glass_recess();
+        flange_opening();
+        cable_exit();
+        cover_holes(clear_d);
+    }
+}
+
+// part = "assembled"  both parts in place, y up - for the checks and renders
+//        "body"       print orientation, base on the plate
+//        "cover"      print orientation, top on the plate
+//        "coupon"     print orientation, base on the plate
+part = "assembled";
+
+if (part == "body")        rotate([90, 0, 0]) dock_body();
+// The cover is placed beside the body on the plate, not just turned over:
+// opened together, Orca merges the two files into one object at their
+// exported positions, and an unshifted cover sat under the bed.
+else if (part == "cover")  translate([base_d - 15, 0, h_dock]) rotate([-90, 0, 0]) dock_cover();
+else if (part == "coupon") rotate([90, 0, 0]) intersection() { dock_body(); coupon_block(); }
+else if (part == "assembled") { dock_body(); dock_cover(); }

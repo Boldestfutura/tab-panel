@@ -45,12 +45,21 @@ LIP_H = scad("lip_h")
 GLASS_H, FRAME_W = scad("glass_h"), scad("frame_w")
 BASE_D = scad("base_d")
 FACE_H = GLASS_H + 2 * FRAME_W
-PI_SHIFT = 22.78
-BOARD_W, BOARD_H = 85.0, 56.0          # a Pi 4B / 5
+PI_SHIFT = scad("pi_shift")
+BOARD_W, BOARD_H = scad("pi_len"), 56.0   # a Pi 4B
 PANEL_T = scad("panel_t")              # glass front to chassis rear
 PI_STACK = 22.4                        # 5 standoff + 1.4 PCB + ~16 USB-A
 VENT_P, VENT_N = scad("vent_p"), int(scad("vent_n"))
 CABLE_X, CABLE_W = scad("cable_x"), scad("cable_w")
+TIE_X, TIE_Y, TIE_T = scad("tie_x"), scad("tie_y"), scad("tie_t")
+HOLES_DX = (111.83, -106.27)            # dock.scad holes_dx - a list, scad() reads numbers
+HOLES_DZ = (66.50, -66.50)
+FLANGE_DX = scad("flange_dx")
+TAB_END = PANEL_T + scad("tab_gap") + scad("tab_t")
+BULK_Z, WALL_ = scad("bulk_z"), scad("wall")
+BOSS_LEN, PILOT_D, CLEAR_D = scad("boss_len"), scad("pilot_d"), scad("clear_d")
+COVER_Y = (28.0, 122.0)                 # dock.scad cover_screw_y
+H_DOCK = LIP_H + (GLASS_H + 2 * FRAME_W) * math.cos(math.radians(LEAN))
 GLASS_W = scad("glass_w")
 WALL = scad("wall")
 TAPER = scad("taper", 0.0)
@@ -98,20 +107,28 @@ def hits(tris, origin, direction):
     return sorted(set(out))
 
 
-def main(path):
+def main(path, body_path=None):
     tris = load(path)
     fails = []
     d_c = FACE_H / 2   # the Pi centres on the glass centre
     axis = (math.cos(-TH), math.sin(-TH), 0.0)
 
-    # 1. The Pi has to FIT, now that the back is closed and there is no
-    # window to poke out of. Fire a ray from the panel's rear face straight
-    # back and see where the shell stops it.
-    print("Pi clearance - sealed back, so the board must fit inside:")
+    # 1. The Pi has to FIT. Fire rays from the panel's rear face straight
+    # back and see where the shell stops them.
+    #
+    # Every 5 mm across the board plus 3 mm either side, not just its two
+    # ends and middle: three columns let a bulkhead sit 1.2 mm behind the
+    # panel, right through the board, and report 25 mm of clearance.
+    print("Pi clearance - the board must fit inside:")
     worst = 1e9
+    cols = []
+    lz = PI_SHIFT - BOARD_W / 2 - 3
+    while lz <= PI_SHIFT + BOARD_W / 2 + 3 + 1e-6:
+        cols.append(lz)
+        lz += 5.0
     for ly in (-BOARD_H / 2, 0.0, BOARD_H / 2):
         row = []
-        for lz in (PI_SHIFT - BOARD_W / 2, PI_SHIFT, PI_SHIFT + BOARD_W / 2):
+        for lz in cols:
             h = hits(tris, face_point(d_c, ly, lz), axis)
             if not h:
                 row.append("OPEN")
@@ -121,7 +138,7 @@ def main(path):
             clear = h[0] - PANEL_T
             worst = min(worst, clear)
             row.append("%.1f" % clear)
-        print("   y=%+6.1f  %s" % (ly, "  ".join("%8s" % x for x in row)))
+        print("   y=%+6.1f  %s" % (ly, " ".join("%5s" % x for x in row)))
     print("   worst %.1f mm against a %.1f mm Pi 4B stack -> %+.1f mm margin"
           % (worst, PI_STACK, worst - PI_STACK))
     if worst < PI_STACK:
@@ -211,6 +228,67 @@ def main(path):
         fails.append("cable exit wrong at x=%.1f (in-slot %s, beside %s)"
                      % (dx, low_in, beside))
 
+    # 3. The zip-tie bar. It spans the pocket, and the pocket cut is told to
+    # spare it - if that ever stops working the bar vanishes and the mesh is
+    # still perfectly valid. So: open below the bar, a bar-thick solid at
+    # the right height, and open above it.
+    print("\nZip-tie bar over the pocket:")
+    x = BASE_D - TIE_X
+    h = [t - 5.0 for t in hits(tris, (x, -5.0, 0.0), (0.0, 1.0, 0.0)) if t < 25.0]
+    ok = (len(h) == 2 and abs(h[0] - TIE_Y) < 0.3
+          and abs(h[1] - h[0] - TIE_T) < 0.3)
+    print("   x=%5.1f  crossings at y=%s  %s"
+          % (x, ["%.1f" % v for v in h], "ok" if ok else "WRONG"))
+    if not ok:
+        fails.append("tie bar wrong at x=%.1f (crossings %s)" % (x, h))
+
+    # 4. The cover screws: clearance through the cover, pilot into a boss.
+    # On the axis a ray goes through the cover and down the pilot; 1.5 mm
+    # off it - inside the clearance hole, outside the pilot - it must pass
+    # the cover and stop on the boss.
+    print("\nCover screws - through the cover, into a boss:")
+    for z in (-BULK_Z, BULK_Z):
+        for y in COVER_Y:
+            on = hits(tris, (BASE_D + 5.0, y, z), (-1.0, 0.0, 0.0))
+            off = hits(tris, (BASE_D + 5.0, y + 1.5, z), (-1.0, 0.0, 0.0))
+            first_on = on[0] if on else None
+            first_off = off[0] if off else None
+            ok = (first_on is not None and first_off is not None
+                  and first_on > first_off + BOSS_LEN - 2.0)
+            print("   y=%5.1f z=%+6.1f  on-axis first hit %s, beside it %s  %s"
+                  % (y, z, "%.1f" % first_on if on else "none",
+                     "%.1f" % first_off if off else "none", "ok" if ok else "WRONG"))
+            if not ok:
+                fails.append("cover screw y=%.0f z=%+.0f: hole or boss missing" % (y, z))
+
+    # 5. With the cover off, a driver has to reach every tab screw. Rev M
+    # passed every check above and still could not be assembled: the back
+    # was closed and the top two screws had 7 mm of air behind them.
+    #
+    # Needs the BODY alone - with the cover on, the screws are meant to be
+    # shut in. Coaxial room behind the tab: open air, or >= 40 mm for a
+    # stubby driver.
+    if body_path:
+        print("\nTab screws, cover off - room for a driver behind each:")
+        btris = load(body_path)
+        for dz in HOLES_DX:
+            for dy in HOLES_DZ:
+                p = face_point(d_c, dy, dz + FLANGE_DX)
+                o = tuple(p[i] + axis[i] * (TAB_END + 0.3) for i in range(3))
+                # body STL is in print orientation: y-up x,y,z -> x,-z,y
+                o2 = (o[0], -o[2], o[1])
+                a2 = (axis[0], -axis[2], axis[1])
+                h = hits(btris, o2, a2)
+                room = h[0] if h else None
+                ok = room is None or room >= 40.0
+                print("   hole y=%+5.1f z=%+6.1f  %s  %s"
+                      % (dy, dz + FLANGE_DX,
+                         "open" if room is None else "%.1f mm" % room,
+                         "ok" if ok else "BLOCKED"))
+                if not ok:
+                    fails.append("tab screw y=%+.0f z=%+.0f: only %.1f mm for a driver"
+                                 % (dy, dz + FLANGE_DX, room))
+
     print()
     if fails:
         print("FAIL - %d problem(s):" % len(fails))
@@ -222,4 +300,5 @@ def main(path):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "dock-whole.stl"))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "dock-assembled.stl",
+                  sys.argv[2] if len(sys.argv) > 2 else None))

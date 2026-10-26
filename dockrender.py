@@ -127,7 +127,7 @@ def render(path, scene, yaw, pitch, dist, target, W=1000, Hh=720, ortho=None, f=
     print('wrote', path)
 
 if __name__ == '__main__':
-    dock = [(t, 'pla') for t in load_stl('dock-whole.stl')]
+    dock = [(t, 'pla') for t in load_stl('dock-assembled.stl')]
     tgt_full = (BASE_D/2, 78, 0)
     render('dock-01-hero.png', ground() + dock + panel_tris(),
            math.radians(-38), math.radians(14), 640, tgt_full)

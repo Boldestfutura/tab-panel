@@ -1,57 +1,94 @@
 # Bench dock — Waveshare 10.1" DSI touch panel
 
-A one-piece printed dock that holds a **10.1-DSI-TOUCH-A (WS-30052)** panel at a
-15° lean with a Raspberry Pi sealed inside it. Built to run a Home Assistant
-dashboard on a kitchen bench.
+A printed dock that holds a **10.1-DSI-TOUCH-A (WS-30052)** panel at a 15°
+lean with a Raspberry Pi 4B inside it. Built to run a Home Assistant dashboard
+on a kitchen bench. Rev N: two parts, a body and a cover.
 
 ```
-246 × 158 × 78 mm     249 cm³, ~308 g     watertight, 7,426 tri
+246 × 158 × 78 mm     body ~190 g + cover ~123 g     no supports
 ```
 
 ![The dock with the panel in it](render-01-hero.png)
 
 The glass drops into a 1.1 mm recess from the front and finishes flush. The
 chassis passes through a flange-sized opening behind it and screws to four
-tabs. The back is closed — no window, no visible fasteners — and the flanks
-draw in 10 mm a side starting at the screen edge, so the front reads thinner
-than the body is.
+tabs. The back, the top and the strip above the screen are one removable
+cover, held by four M3 screws, and the flanks draw in 10 mm a side starting at
+the screen edge, so the front reads thinner than the body is.
 
 | | |
 |---|---|
-| ![back](render-02-back.png) | ![plan](render-03-plan.png) |
-| Closed back — the cable slot is the only opening | Flanks drawing in from the screen edge |
+| ![back](render-02-back.png) | ![cover off](render-03-open.png) |
+| Cover on — four screws and the cable slot | Cover off — every screw and the Pi in reach |
+
+## Why two parts
+
+Rev M was one closed piece. It passed every check it had and could not have
+been built:
+
+- **The panel could not be screwed in.** The tabs take screws from behind and
+  the back was sealed; the top two had 7 mm of air behind them.
+- **The Pi did not fit.** The right bulkhead sat 1.2 mm behind the panel,
+  straight through the board. The clearance check sampled three columns and the
+  bulkhead was between two of them.
+- **The edge above the screen could not print.** Base-down it was a ceiling
+  230 mm wide over the opening, held only at its ends. Orca called it a
+  floating cantilever.
+
+The cover fixes the first and third at once: the strip above the screen is
+part of it, so the body's front is a U with nothing to bridge, and taking it
+off opens the whole back. The bulkheads moved out to ±75 mm, and the top tabs
+gained a 45° web to the side wall so they grow from something.
 
 ## Print it
 
-| | |
-|---|---|
-| Orientation | base down, **no supports** |
-| Bed needed | 246 × 78 mm whole, 123 × 78 mm split |
-| Layer height | 0.24 mm |
-| Walls | 6 at 0.4 mm |
-| Material | PLA or PETG |
-| Filament | ~308 g whole, ~152 g per half |
+| | body | cover |
+|---|---|---|
+| Orientation | base down | top down |
+| Supports | none | none |
+| Footprint | 246 × 78 mm, 158 tall | 241 × 39 mm, 155 tall |
+| Filament | ~190 g | ~123 g |
+
+Both STLs load in print orientation — drop them on the plate as they are.
+Layer height 0.24 mm, 6 walls at 0.4 mm, PLA or PETG. The cover stands on its
+narrow top face, so give it a brim.
 
 ```
-rev-m-coupon.stl      11 g   one corner — PRINT THIS FIRST
-rev-m-dock.stl       308 g   one piece
-rev-m-dock-half.stl  152 g   print two and glue; the panel braces the seam
+rev-n-coupon.stl    13 g   bottom-right corner — PRINT THIS FIRST
+rev-n-body.stl     190 g
+rev-n-cover.stl    123 g
 ```
 
-![The corner coupon](render-04-coupon.png)
-
-**Print the coupon first.** It is the top-right corner of the real model —
-same recess, same opening edge, same tab and hole — for 12 g and half an hour
-instead of 308 g and most of a day. Check three things in order: does the panel
-corner seat into the recess and finish flush, does the flange pass the opening
-without forcing, does an M2.5 screw line up with the tab hole.
+**Print the coupon first.** It is the bottom-right corner of the real body —
+same recess, same opening edge, same tab and hole — for 13 g and half an hour.
+Check three things in order: does the panel corner seat into the recess and
+finish flush, does the flange pass the opening without forcing, does an M2.5
+screw line up with the tab hole.
 
 ```
-openscad -o dock-whole.stl dock.scad      # whole
-openscad -D split=true  -o half.stl dock.scad
-openscad -D coupon=true -o coupon.stl dock.scad
-python3 verify_dock.py dock-whole.stl     # see below — this is not optional
+openscad -D 'part="assembled"' -o dock-assembled.stl dock.scad
+openscad -D 'part="body"'      -o rev-n-body.stl     dock.scad
+openscad -D 'part="cover"'     -o rev-n-cover.stl    dock.scad
+openscad -D 'part="coupon"'    -o rev-n-coupon.stl   dock.scad
+python3 verify_dock.py dock-assembled.stl rev-n-body.stl
+python3 printcheck.py rev-n-body.stl rev-n-cover.stl rev-n-coupon.stl
 ```
+
+## Assemble it
+
+You need four M2.5 × 6 screws for the panel, four M3 × 10 pan-head screws for
+the cover, a zip tie up to 4.8 mm wide, and a stubby screwdriver — the bottom
+two panel screws have 45 mm of room behind them.
+
+1. Bolt the Pi to the panel's back and connect the DSI ribbon and the GPIO
+   power leads.
+2. With the cover off, pass the panel and Pi in through the front until the
+   glass sits in its recess.
+3. From behind, screw the panel to the four tabs.
+4. Plug the USB-C lead into the Pi, lay it across the bar over the slot in the
+   base, zip-tie it there, and let it out through the slot at the back.
+5. Fit the cover between the side walls and drive the four M3 screws. They cut
+   their own thread in the 2.5 mm pilots; don't overtighten into PLA.
 
 ## The panel, measured
 
@@ -86,14 +123,19 @@ The panel takes 5 V and ground **from the Pi's GPIO header**, on every Pi —
 through the Pi's own rail on top of the Pi, so use the official supply. A weak
 charger presents as a dead display rather than a power fault.
 
-## The Pi is sealed inside
+The USB-C lead leaves through a slot in the base at the back. Zip-tie it to
+the bar arched over that slot, so a tug on the cable stops at the dock instead
+of the Pi's socket. The slot is open underneath, so the tie can be redone from
+below without taking the cover off.
+
+## The Pi is inside
 
 It bolts to the **panel's** back on the 58 × 49 pattern, not to the dock, and
-the whole assembly drops in from the front. Clearance behind the panel is
+the whole assembly goes in from the front. Clearance behind the panel is
 25.2 mm at the Pi's top edge against a 22.4 mm stack (5 standoff + 1.4 board +
-~16 USB-A), and 36.4 mm at the board centre.
+~16 USB-A), and 36.4 mm at the board centre, all the way across the board.
 
-The cost of a closed back is heat. Four slots in the base are the only airflow
+The cost of a closed cover is heat. Four slots in the base are the only airflow
 and there is no high outlet, so they ventilate by leakage rather than
 convection. **If it throttles, put a heatsink on the Pi** — there is 14 mm
 spare over the SoC — rather than cutting holes in the back.
@@ -110,26 +152,35 @@ nowhere near sufficient, and this project has the scars:
 - Tapering the finished shell sliced the side walls off and left the cavity
   open along both flanks. Still watertight — an open-sided shell is still a
   closed surface.
+- Rev M passed all of it and could not be assembled or printed — see *Why two
+  parts*.
 
 So `verify_dock.py` fires rays through everything that is supposed to be a hole
-and measures what it finds: the Pi clearance, the recess against the rounded
-flank, that the flank is a wall and not an opening, the base vents, the cable
-slot. It reads its parameters out of `dock.scad` rather than hardcoding them,
+and measures what it finds: the Pi clearance every 5 mm across the board, the
+recess against the rounded flank, that the flank is a wall and not an opening,
+the base vents, the cable slot, the zip-tie bar, the cover screws landing in
+their bosses, and — given the body on its own — room for a driver behind every
+tab. It reads its parameters out of `dock.scad` rather than hardcoding them,
 because hardcoding rotted the first time a dimension moved and it then blamed
 the model.
 
-`overhang.py` measures real overhang angles off the mesh rather than asserting
-them. Current model: **3.65 % of surface area past 45°, all of it internal** —
-the cavity ceiling and the slot roofs. Nothing external overhangs, so no
-supports.
+`printcheck.py` slices each part the way the printer will and measures how far
+any layer reaches across air from something under it. The limit is 15 mm. Rev M
+base-down fails it at 58 mm, at the edge above the screen; Rev N's worst is the
+foot recesses at 11 mm. It replaced `overhang.py`, which measured face angles
+and reported "nothing external overhangs" on that same model.
+
+One thing no script here can check: the webs under the top tabs sit 0.2 mm
+behind the panel's back edges, 17–28 mm in from each side wall. If the panel
+has anything raised there, it will hit them.
 
 ## Files
 
 ```
 dock.scad                    parametric source — the one to edit
-verify_dock.py               proves the cuts actually cut
+verify_dock.py               proves the cuts cut and the parts fit
+printcheck.py                proves each part prints without supports
 check.py                     manifold / volume / bbox
-overhang.py                  overhang angles for the base-down print
 dockrender.py                pure-Python renderer, no dependencies
 panel-ws23450-measured.md    a DIFFERENT panel — read its banner
 superseded/                  the earlier two-feet design
