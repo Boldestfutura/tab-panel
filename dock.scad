@@ -323,7 +323,10 @@ module half(s) {
 }
 
 if (part == "left")        rotate([90, 0, 0]) half(-1);
-else if (part == "right")  translate([0, 120, 0]) rotate([90, 0, 0]) half(1);
+// beside the left half, not over it: rotated, it spans y -150..0, and the
+// first export (translated +120) overlapped the left half - Orca merged the
+// two into one object. Side by side the pair takes 192 x 150 of the plate.
+else if (part == "right")  translate([100, 150, 0]) rotate([90, 0, 0]) half(1);
 else if (part == "coupon") rotate([90, 0, 0]) intersection() { dock(); coupon_block(); }
 else if (part == "assembled") dock();
 
