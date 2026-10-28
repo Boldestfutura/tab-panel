@@ -1,8 +1,9 @@
 // =====================================================================
-// Bench dock for a Lenovo Tab P11 (2nd Gen), forked from the pi-panel
-// Rev N dock. Same body - the 15 degree lean, soft flanks, tapered back,
-// base cable exit and feet - with the panel's opening, tabs and Pi cavity
-// replaced by a pocket the tablet lifts in and out of.
+// Bench dock for a Lenovo Legion Tab (8.8", Gen 3), forked from the
+// pi-panel Rev N dock. Same body - soft flanks, tapered back and feet -
+// with the panel's opening, tabs and Pi cavity replaced by a pocket the
+// tablet sits in. (It was drawn for an 11" Tab P11 first; that was too big
+// beside a 7" Nest Hub, and is in the git history.)
 //
 // Rev B, "one finished product": the tablet sits in a pocket on a 17 degree
 // face, its glass a little below a bezel that runs all round. Behind the
@@ -20,25 +21,24 @@
 //        edge - the floor under the bottom strip is relieved, so the tablet
 //        rocks on the ends of the side rims and its top tips out.
 //
-// It is ~307 mm wide and the P2S bed is 256, so it prints as two halves,
-// split down the middle, glued on a solid seam wall and keyed: one half
-// carries two tapered ribs, the other the matching grooves.
-// The split falls under the tablet; a fine reveal groove round the outside
-// makes the line that does show read as a parting line, not a glue joint.
+// It is ~246 mm wide and prints in one piece, base down, on the P2S's
+// 256 mm bed.
 //
-//   openscad -D 'part="left"'  -o tablet-dock-left.stl  dock.scad
-//   openscad -D 'part="right"' -o tablet-dock-right.stl dock.scad
-//   openscad -D 'part="coupon"' -o tablet-dock-coupon.stl dock.scad
-//   then check.py and printcheck.py on all three.
+//   openscad -D 'part="print"'  -o tab-dock.stl        dock.scad
+//   openscad -D 'part="coupon"' -o tab-dock-coupon.stl dock.scad
+//   then check.py and printcheck.py on both.
 // =====================================================================
 
-/* [Tablet] Lenovo PSREF: 269.1 x 169.4 x 7.4 mm "without camera deco".
-   Landscape. The rear camera bump is NOT in that 7.4 and its position is
-   not published, so the pocket floor is relieved everywhere but a rim -
-   the tablet rests on its edges and the bump can be anywhere. */
-tab_w     = 269.1;
-tab_h     = 169.4;
-tab_t     = 7.4;
+/* [Tablet] Lenovo PSREF, Legion Tab (8.8", 3): 208.54 x 129.46 x 7.79 mm,
+   ~350 g. Landscape, power and volume buttons on the top edge, the
+   charging USB-C (Hi-Speed) in the middle of the right-hand short edge -
+   that is the port the magnetic nub goes in. The second USB-C, middle of
+   the bottom edge, is covered by the pocket and not used. The rear camera
+   bump's size and position are not published, so the pocket floor is
+   relieved everywhere but a rim - the tablet rests on its edges. */
+tab_w     = 208.54;
+tab_h     = 129.46;
+tab_t     = 7.79;
 tab_r     = 6.0;    // pocket corner radius. Smaller than the tablet's own
                     // corner is safe; larger would hit it. Unmeasured.
 clear     = 0.4;    // per side, round the tablet
@@ -52,7 +52,7 @@ relief    = 1.5;    // how much deeper the floor is inside the rim
 /* [Push to release] The bottom rim is cut away: the tablet rests on the
    side and top rims only, its bottom strip over a well. Press that strip
    and the tablet pivots on the lower ends of the side rims; the top swings
-   out by tilt_w * (tab_h - tilt_a) / tilt_a, about 20 mm. Taps on the
+   out by tilt_w * (tab_h - tilt_a) / tilt_a, about 15 mm. Taps on the
    screen above the pivot press it onto the rims and do nothing. */
 tilt_a    = 12;     // pivot, up from the pocket's bottom edge
 tilt_w    = 1.5;    // well depth below the rim
@@ -87,24 +87,19 @@ ad_t      = 8.0;    // thickness, front to back
    body to the back. The duct takes the cable's far plug: thread it from
    the chamber end before the adapter goes in. */
 duct_d    = 14;     // fits a USB-C plug's overmold; USB-A needs 17
-reveal    = 0.8;    // the parting-line groove round the seam: width = depth
 
 /* [Surround] */
 frame_w   = 3.5;    // lip beyond the pocket and bays, as on Rev N
 
 /* [Dock body] */
-base_d    = 92;     // Rev N's 78 was for a 160 mm tall dock; this one is
-                    // ~180, and a tablet's weight sits forward of the base
+base_d    = 80;     // Rev N's 78 was for a 160 mm tall dock; this one is
+                    // ~140, and the tablet's weight sits forward of the base
 top_t     = 20;
 lip_h     = 9;
 flare     = 1.35;
 
 /* [Build] */
 wall      = 2.4;
-seam_t    = 6;      // solid wall each side of the split, the glue face
-key_w     = 8;      // key ribs: width at the seam face
-key_h     = 3;      // how far they stand off it; 45 degree sides
-key_c     = 0.2;    // clearance in the grooves
 foot_d    = 22;
 foot_deep = 1.2;
 
@@ -234,9 +229,6 @@ module cavity() {
                 offset(delta = -wall)
                     polygon(profile);
         front_backing();
-        // seam wall, the glue face between the halves
-        translate([-50, -50, -seam_t])
-            cube([base_d + 100, h_dock + 100, 2 * seam_t]);
         cable_jacket();
     }
 }
@@ -347,19 +339,7 @@ module adapter() {
             cube([ad_t, ad_l, ad_w], center = true);
 }
 
-// The parting line: a shallow groove round the outside on the seam.
-module reveal_cut() {
-    difference() {
-        translate([-50, -50, -reveal / 2]) cube([base_d + 100, h_dock + 100, reveal]);
-        intersection() {
-            translate([0, 0, -dock_w]) linear_extrude(height = 2 * dock_w)
-                offset(delta = -reveal) polygon(profile);
-            taper_block(reveal);
-        }
-    }
-}
-
-// ---- feet, keys ------------------------------------------------------
+// ---- feet ------------------------------------------------------------
 module feet() {
     for (x = [base_d * 0.22, base_d * 0.78])
         for (z = [-dock_w / 2 + 34, dock_w / 2 - 34])
@@ -368,30 +348,9 @@ module feet() {
                     cylinder(h = foot_deep + eps, d = foot_d);
 }
 
-// Two key ribs across the seam, in the solid seam wall: one up the face
-// just behind the front wall, which fixes front-to-back; one along the base,
-// which fixes up-and-down. Together the halves go together one way only.
-// The left half carries them, the right half the grooves. 45 degree sides,
-// so the ribs print without support and the grooves self-centre. Glue the
-// whole seam face as well.
-function key_runs() = [
-    [face_pt(25, front_t + 6), face_pt(face_h - 30, front_t + 6)],
-    [[20, 10], [base_d - 14, 10]],
-];
-
-// c = 0 is the rib; c = key_c the groove, a little bigger and deeper
-module keys(c = 0) {
-    for (r = key_runs())
-        hull()
-            for (p = r)
-                translate([p[0], p[1], -0.5])
-                    cylinder(d1 = key_w + 2 * c, d2 = key_w - 2 * key_h + 2 * c,
-                             h = key_h + 0.5 + 2 * c, $fn = 32);
-}
-
 // ---- the dock --------------------------------------------------------
 // slots = false for the coupon: printed flat, each slot's roof would be a
-// 24 mm bridge. In the halves, printed upright, it is only slot_w.
+// 24 mm bridge. In the dock, printed upright, it is only slot_w.
 module dock(slots = true) {
     difference() {
         union() {
@@ -402,7 +361,6 @@ module dock(slots = true) {
         if (slots) grilles();
         cable_cut();
         feet();
-        reveal_cut();
     }
 }
 
@@ -429,28 +387,16 @@ module coupon_print() {
 }
 
 // part = "assembled"  the whole dock, y up - for checks and renders
-//        "left"/"right" one half each, print orientation, base on the plate
+//        "print"      the dock, print orientation, base on the plate
 //        "coupon"     print orientation
 part = "assembled";
 
-module half(s) {
-    module cut() {
-        intersection() {
-            dock();
-            translate([-50, -50, s > 0 ? 0 : -dock_w]) cube([base_d + 100, h_dock + 100, dock_w]);
-        }
-    }
-    if (s < 0) union() { cut(); keys(); }
-    else difference() { cut(); keys(key_c); }
-}
+bed = 256;   // Bambu P2S
+assert(dock_w <= bed - 6, "dock wider than the bed");
 
-if (part == "left")        rotate([90, 0, 0]) half(-1);
-// beside the left half, not over it: an export that overlapped the left
-// half had Orca merge the two into one object.
-else if (part == "right")  translate([100, dock_w / 2 + 10, 0]) rotate([90, 0, 0]) half(1);
+if (part == "print")       rotate([90, 0, 0]) dock();
 else if (part == "coupon") coupon_print() intersection() { dock(slots = false); coupon_block(); }
 else if (part == "assembled") dock();
-else if (part == "keyfit") intersection() { half(-1); half(1); }
 
 // The tablet as a block, for the fit check and renders: in the pocket,
 // face `flush` below the dock's front, resting on the rim.
