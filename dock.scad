@@ -33,9 +33,9 @@
    ~350 g. Landscape, power and volume buttons on the top edge, the
    charging USB-C (Hi-Speed) in the middle of the right-hand short edge -
    that is the port the magnetic nub goes in. The second USB-C, middle of
-   the bottom edge, is covered by the pocket and not used. The rear camera
-   bump's size and position are not published, so the pocket floor is
-   relieved everywhere but a rim - the tablet rests on its edges. */
+   the bottom edge, is covered by the pocket and not used. The pocket
+   floor is relieved everywhere but a rim - the tablet rests on its edges -
+   and the rear camera bump gets its own deeper recess (below). */
 tab_w     = 208.54;
 tab_h     = 129.46;
 tab_t     = 7.79;
@@ -48,6 +48,20 @@ lean      = 17;     // degrees back from vertical
 /* [Pocket floor relief] */
 rim       = 12;     // width of the ledge the tablet's back rests on
 relief    = 1.5;    // how much deeper the floor is inside the rim
+
+/* [Camera bump] Not dimensioned by Lenovo: scaled off the edge views in the
+   PSREF overview drawing (208.54 mm = the long edge). The module sits in
+   the top-left corner seen from the screen side, ~46 x 29 mm, standing
+   ~1.6-1.9 mm off the back. It overlaps the top and left rims, so without
+   this the tablet would sit on its camera and rock. Measured from the
+   tablet's left end and its top edge: */
+cam_x0    = 5.6;    // left end -> near side of the bump
+cam_x1    = 51.4;   // left end -> far side
+cam_y0    = 6;      // top edge -> near side
+cam_y1    = 35;     // top edge -> far side
+cam_h     = 1.9;    // how far it stands off the back
+cam_m     = 5;      // margin round it: the drawing is a render, not a spec
+cam_d     = cam_h + 0.7;   // recess depth below the rim
 
 /* [Push to release] The bottom rim is cut away: the tablet rests on the
    side and top rims only, its bottom strip over a well. Press that strip
@@ -110,7 +124,7 @@ eps  = 0.01;
 pocket_w = tab_w + 2 * clear;
 pocket_h = tab_h + 2 * clear;
 pocket_t = tab_t + flush;
-front_t  = pocket_t + relief + wall;          // solid front wall behind the pocket
+front_t  = pocket_t + max(relief, cam_d) + wall;   // solid front wall behind the pocket
 dock_w   = pocket_w + 2 * bay_w + 2 * frame_w;
 face_h   = pocket_h + 2 * frame_w;
 h_dock   = lip_h + face_h * cos(lean);
@@ -250,9 +264,12 @@ module pocket() {
     on_face(face_h / 2) {
         translate([pocket_t / 2 - eps, 0, 0])
             rbox(pocket_t + 2 * eps, pocket_h, pocket_w, tab_r);
-        // relief inside the rim, for the camera bump
+        // relief inside the rim
         translate([pocket_t + relief / 2 - eps, 0, 0])
             rbox(relief + 2 * eps, pocket_h - 2 * rim, pocket_w - 2 * rim, tab_r);
+        // the camera recess, through the top and left rims
+        translate([pocket_t + cam_d / 2 - eps, 0, 0])
+            cam_box(cam_d + 2 * eps, cam_m);
         // the chambers: behind the bezel skin, open to the pocket
         for (s = [-1, 1])
             translate([(skin_t + chamber_d) / 2, 0, s * (pocket_w / 2 + bay_w / 2 - 1)])
@@ -285,6 +302,15 @@ module grilles() {
                             translate([x, y, s * (pocket_w / 2 + bay_w)])
                                 cylinder(d = slot_w, h = 40, center = true, $fn = 16);
                 }
+}
+
+// The camera bump's footprint in the face frame (y up the face, z across,
+// screen-left is -z), grown by m all round; len deep, centred on x = 0.
+module cam_box(len, m) {
+    w = cam_x1 - cam_x0 + 2 * m;
+    h = cam_y1 - cam_y0 + 2 * m;
+    translate([0, tab_h / 2 - (cam_y0 + cam_y1) / 2, -tab_w / 2 + (cam_x0 + cam_x1) / 2])
+        rbox(len, h, w, min(4, h / 2 - eps, w / 2 - eps));
 }
 
 // ---- cable path ------------------------------------------------------
@@ -398,17 +424,21 @@ if (part == "print")       rotate([90, 0, 0]) dock();
 else if (part == "coupon") coupon_print() intersection() { dock(slots = false); coupon_block(); }
 else if (part == "assembled") dock();
 
-// The tablet as a block, for the fit check and renders: in the pocket,
-// face `flush` below the dock's front, resting on the rim.
-module tablet() {
-    on_face(face_h / 2)
+// The tablet as a block, with its camera bump, for the fit checks and
+// renders: in the pocket, face `flush` below the dock's front, resting on
+// the rim. s shrinks it all round: its back RESTS on the rim, and touching
+// faces would otherwise show up as a zero-volume "interference".
+module tablet(s = 0) {
+    on_face(face_h / 2) {
         translate([flush + tab_t / 2, 0, 0])
-            rbox(tab_t, tab_h, tab_w, tab_r);
+            rbox(tab_t - 2 * s, tab_h - 2 * s, tab_w - 2 * s, tab_r);
+        translate([pocket_t + cam_h / 2 - s, 0, 0])
+            cam_box(cam_h, -s);
+    }
 }
-// "fit" must come out EMPTY: anything left is plastic inside the tablet.
-// shrunk 0.05 mm all round: its back RESTS on the rim, and touching faces
-// would otherwise show up as a zero-volume "interference"
-if (part == "fit") intersection() { dock(); on_face(face_h / 2) translate([flush + tab_t / 2, 0, 0]) rbox(tab_t - 0.1, tab_h - 0.1, tab_w - 0.1, tab_r); }
+// "fit" must come out EMPTY: anything left is plastic inside the tablet
+// or its camera bump.
+if (part == "fit") intersection() { dock(); tablet(0.05); }
 if (part == "adapter") intersection() { dock(); adapter(); }
 
 // The nub, standing off the tablet's port edge at the port.
@@ -429,9 +459,7 @@ module face_shift(dz, dx = 0) {
 if (part == "slide") intersection() {
     dock();
     union() {
-        face_shift(-port_side * (slide_s - 0.05))
-            on_face(face_h / 2) translate([flush + tab_t / 2, 0, 0])
-                rbox(tab_t - 0.1, tab_h - 0.1, tab_w - 0.1, tab_r);
+        face_shift(-port_side * (slide_s - 0.05)) tablet(0.05);
         hull() for (dx = [0, -30])
             face_shift(-port_side * (slide_s - 0.05), dx) nub();
     }

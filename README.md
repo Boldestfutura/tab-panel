@@ -32,8 +32,13 @@ From Lenovo's [PSREF](https://psref.lenovo.com/Product/Lenovo_Tablets/Legion_Tab
   deep past the glass, so the dock's face stands just proud of the screen as a bezel. The
   17° lean and the pocket walls hold the tablet, with nothing to clip.
 - **Rim and relief.** The tablet's back rests on a 12 mm rim. Inside the rim the floor is
-  1.5 mm deeper. The camera bump's size and position aren't published, so this lets it
-  sit anywhere.
+  1.5 mm deeper.
+- **Camera recess.** The rear camera module sits in the top-left corner (seen from the
+  screen side) and overlaps the rim, so it gets its own recess: 2.6 mm below the rim, 5 mm
+  bigger than the bump all round. Without it the tablet would sit on its camera and rock.
+  Lenovo doesn't dimension the bump; it's scaled off the edge views in the PSREF drawing,
+  about 46 × 29 mm and 1.6–1.9 mm proud (`cam_*` in `dock.scad`). The front wall is
+  thickened behind it, so the wall there is as thick as anywhere else.
 - **Hidden chambers.** Beside each short edge, behind a 1.2 mm skin of bezel, is a
   15 mm chamber that opens onto the tablet's edge below the glass. The speakers fire into
   it and out through **slots in each flank**, running up the face. The corners stay
@@ -82,7 +87,7 @@ too thick to fit.
 It's 246 × 80 × 140 mm, which fits the P2S's 256 mm bed, so it **prints in one piece**,
 base down, without supports. The worst reach over air is 10.8 mm, measured by
 `printcheck.py`, against a 15 mm limit. A solid web runs from the cable duct down to the
-floor, so the duct has something under it. About 410 g of PLA by volume; the slicer's
+floor, so the duct has something under it. About 450 g of PLA by volume; the slicer's
 infill brings that down.
 
 | File | What |
@@ -104,6 +109,8 @@ right-hand side of the face, from the bottom of the chamber to past the port. Ch
 
 These aren't published, and the design assumes them:
 
+- **The camera bump** is inside the recess, and is no more than ~2.5 mm proud. The fit
+  checks model it, but the numbers are from a drawing.
 - **Corner radius ≥ 6 mm.** The pocket's corner is 6 mm. A tighter tablet corner would
   hit it.
 - **Speakers on the short edges.** Lenovo lists two, not where. If they're on the long
@@ -124,7 +131,8 @@ openscad -D 'part="slide"'   -o sl.stl  dock.scad
 openscad -D 'part="nubfit"'  -o nf.stl  dock.scad
 ```
 
-`part="fit"` intersects the dock with a tablet-sized block in the pocket, and
+`part="fit"` intersects the dock with a tablet-sized block in the pocket (camera bump
+included), and
 `part="adapter"` with the adapter in its chamber. `part="slide"` puts the tablet slid
 3 mm away from the port, with the nub's path straight down from in front: that's docking.
 `part="nubfit"` checks the nub's spot with the tablet home. If anything comes out, plastic
