@@ -31,14 +31,27 @@ tapered back, recessed feet) at a 17° lean, with a pocket the tablet drops into
   the side rims, and the top tips about 20 mm out of the pocket, ready to grab. Taps on the
   screen above the pivot just press it onto the rims.
 
+### Docking: slide it on
+
+The bezel is unbroken all round, so the magnetic nub, which stands 2 mm off the tablet's
+edge, can't drop through it. The tablet slides instead:
+
+- **In:** tuck the left end about 3 mm under the left bezel, lower the right end into
+  the pocket, then slide it right. The magnet snaps on.
+- **Out:** slide it left about 3 mm, which parts the magnet, then press the bottom edge to
+  tip it out.
+
+There is a 3 mm recess under the left bezel, the full height of the pocket, for the
+tucked end. It's hidden once the tablet is home.
+
 ### Power: magnetic, hidden
 
 Power goes through an **[Adafruit 5521](https://www.adafruit.com/product/5521) magnetic
 right-angle USB-C adapter** (120 W, data as well; Core Electronics stocks it as ADA5521).
 
 - A small nub lives in the tablet's USB-C port. The adapter sits in the port-side chamber,
-  its magnetic face against the tablet's edge. Drop the tablet in: the nub passes a small
-  notch in the bezel and snaps onto the adapter. Lift it out and it lets go.
+  its magnetic face against the tablet's edge, hidden behind the bezel. Slide the tablet
+  home and the nub snaps onto it.
 - Any **straight USB-C cable** plugs into the adapter's other end. It runs down the
   chamber, out of sight, and into a 14 mm duct through the body to an exit low on the
   back.
@@ -80,7 +93,7 @@ port side of the face, from the bottom of the chamber to past the port. Check th
 
 1. the adapter fits the chamber and the bezel hides it,
 2. with a cable plugged into the adapter, the plug and cable fit down the chamber,
-3. the tablet's edge drops in, the nub passes the notch and finds the adapter,
+3. the tablet slides across with the nub under the bezel and finds the adapter,
 4. the glass sits just below the bezel.
 
 ### Check against the real tablet
@@ -103,11 +116,15 @@ python3 check.py tab-dock-*.stl          # manifold, volume, bbox
 python3 printcheck.py tab-dock-*.stl     # reach over air, layer by layer
 openscad -D 'part="fit"' -o fit.stl dock.scad       # must say "top level object is empty"
 openscad -D 'part="adapter"' -o ad.stl dock.scad    # must say "top level object is empty"
+openscad -D 'part="slide"' -o sl.stl dock.scad      # must say "top level object is empty"
+openscad -D 'part="nubfit"' -o nf.stl dock.scad     # must say "top level object is empty"
 openscad -D 'part="keyfit"' -o kf.stl dock.scad     # zero volume: the halves only touch on the seam
 ```
 
 `part="fit"` intersects the dock with a tablet-sized block in the pocket, and
-`part="adapter"` with the adapter in its chamber. If anything comes out, plastic is in the
+`part="adapter"` with the adapter in its chamber. `part="slide"` puts the tablet slid
+3 mm away from the port with the nub's path straight down from in front: that's docking.
+`part="nubfit"` checks the nub's spot with the tablet home. If anything comes out, plastic is in the
 way. `part="bare"` and `part="tablet"` are for renders.
 
 OpenSCAD 2021.01. `printcheck.py` needs numpy.

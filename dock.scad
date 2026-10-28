@@ -9,13 +9,16 @@
 // bezel at each short edge is a hidden chamber: the tablet's edge speakers
 // fire into it and out through slots in each flank. Power is a magnetic
 // right-angle USB-C adapter (Adafruit 5521) captive in the port-side
-// chamber: drop the tablet in and its nub snaps on, lift it out and it lets
-// go. The cable runs down that chamber and through a duct inside the body
-// to an exit low on the back. Nothing shows from the front.
+// chamber. The cable runs down that chamber and through a duct inside the
+// body to an exit low on the back. Nothing shows from the front: the bezel
+// is unbroken all round, so the nub, which stands off the tablet's edge,
+// never passes through it. Instead the tablet slides:
 //
-// To take the tablet out, press its bottom edge: the floor under the bottom
-// strip is relieved, so the tablet rocks on the ends of the side rims and
-// its top tips out of the pocket.
+//   in:  tuck the far end ~3 mm under the far bezel, lower the port end
+//        (the nub clears the bezel), slide it across; the magnet snaps on
+//   out: slide it back ~3 mm, which parts the magnet, then press the bottom
+//        edge - the floor under the bottom strip is relieved, so the tablet
+//        rocks on the ends of the side rims and its top tips out.
 //
 // It is ~307 mm wide and the P2S bed is 256, so it prints as two halves,
 // split down the middle, glued on a solid seam wall and keyed: one half
@@ -73,6 +76,9 @@ port_side = 1;      // +1 = right-hand chamber (looking at the screen), -1 = lef
 port_y    = 0;      // the port's height along the short edge, from its middle
 nub_proud = 2.0;    // how far the nub stands off the tablet's edge
 nub_l     = 12;     // the nub's length along the edge
+nub_t     = 3.5;    // its thickness, front to back
+slide_s   = nub_proud + 1.0;   // the slide: how far the tablet tucks under
+                    // the far bezel, so the nub clears the near one
 ad_l      = 26;     // adapter body: along the edge
 ad_w      = 12;     // off the edge (the nub's face to the far side)
 ad_t      = 8.0;    // thickness, front to back
@@ -259,9 +265,11 @@ module pocket() {
         for (s = [-1, 1])
             translate([(skin_t + chamber_d) / 2, 0, s * (pocket_w / 2 + bay_w / 2 - 1)])
                 rbox(chamber_d - skin_t, bay_h, bay_w + 2, 3);
-        // the nub's way in: it drops past the bezel beside the tablet's edge
-        translate([skin_t / 2 - eps, port_y, port_side * (pocket_w / 2 + (nub_proud + 0.8) / 2 - 0.5)])
-            rbox(skin_t + 4 * eps, nub_l + 2, nub_proud + 1.3, 0.8);
+        // the slide: the whole pocket again, shifted slide_s away from the
+        // port, behind the bezel skin - room under the far bezel, full
+        // height, for the tablet's far end while the nub clears the near one
+        translate([(skin_t + pocket_t) / 2, 0, -port_side * slide_s])
+            rbox(pocket_t - skin_t, pocket_h, pocket_w, tab_r);
         // the release well: the bottom rim, cut down below the rim's level
         translate([pocket_t + tilt_w / 2 - eps, -pocket_h / 2 + tilt_a / 2, 0])
             cube([tilt_w + 2 * eps, tilt_a + 2 * eps, pocket_w - 2 * tab_r], center = true);
@@ -399,7 +407,7 @@ module dock(slots = true) {
 }
 
 // The port side of the face, about 30 g: the front wall only, from the
-// chamber's foot to past the port - the chamber, the nub's notch, the bezel
+// chamber's foot to past the port - the chamber and the bezel over it
 // (no grille: see dock()). Put the adapter in, plug a cable into it, drop the
 // tablet's edge in: does the nub find the adapter, does the bezel hide it,
 // does the plug and its cable fit down the chamber. Printed face up, lying
@@ -456,6 +464,34 @@ module tablet() {
 // would otherwise show up as a zero-volume "interference"
 if (part == "fit") intersection() { dock(); on_face(face_h / 2) translate([flush + tab_t / 2, 0, 0]) rbox(tab_t - 0.1, tab_h - 0.1, tab_w - 0.1, tab_r); }
 if (part == "adapter") intersection() { dock(); adapter(); }
+
+// The nub, standing off the tablet's port edge at the port.
+module nub() {
+    on_face(face_h / 2)
+        translate([flush + tab_t / 2, port_y, port_side * (pocket_w / 2 - clear + nub_proud / 2)])
+            cube([nub_t, nub_l, nub_proud], center = true);
+}
+// "slide" must come out EMPTY too: the tablet seated but slid slide_s away
+// from the port, its far end under the far bezel, and the nub's path
+// straight down to there from in front of the dock. If anything is left,
+// the bezel or a wall is in the way of docking.
+module face_shift(dz, dx = 0) {
+    // move along the dock's width and along the face normal (dx < 0 is
+    // out of the face)
+    translate([dx * cos(lean), -dx * sin(lean), dz]) children();
+}
+if (part == "slide") intersection() {
+    dock();
+    union() {
+        face_shift(-port_side * (slide_s - 0.05))
+            on_face(face_h / 2) translate([flush + tab_t / 2, 0, 0])
+                rbox(tab_t - 0.1, tab_h - 0.1, tab_w - 0.1, tab_r);
+        hull() for (dx = [0, -30])
+            face_shift(-port_side * (slide_s - 0.05), dx) nub();
+    }
+}
+// and with the tablet home, the nub sits in the chamber: "nubfit" empty
+if (part == "nubfit") intersection() { dock(); nub(); }
 if (part == "tablet") rotate([90, 0, 0]) tablet();
 if (part == "show") rotate([90, 0, 0]) { color("#e4e5e9") dock(); color("#1a1f28") tablet(); }
 if (part == "bare") rotate([90, 0, 0]) color("#e4e5e9") dock();
