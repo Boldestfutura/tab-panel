@@ -4,12 +4,20 @@
 // base cable exit and feet - with the panel's opening, tabs and Pi cavity
 // replaced by a pocket the tablet lifts in and out of.
 //
-// The tablet sits flush in a pocket on the leaning face and is held there
-// by gravity: a 15 degree lean, a pocket wall all round, and nothing to
-// unclip. Lift it out by the two side bays.
+// Rev B, "one finished product": the tablet sits in a pocket on a 17 degree
+// face, its glass a little below a bezel that runs all round. Behind the
+// bezel at each short edge is a hidden chamber: the tablet's edge speakers
+// fire into it and out through a grille in each flank. Power is a magnetic
+// right-angle USB-C adapter (Adafruit 5521) captive in the port-side
+// chamber: drop the tablet in and its nub snaps on, lift it out and it lets
+// go. The cable runs down that chamber and through a duct inside the body
+// to an exit low on the back. Nothing shows from the front. Lift the
+// tablet out by the scoop in the top edge.
 //
-// It is 301 mm wide and the P2S bed is 256, so it prints as two halves,
+// It is ~307 mm wide and the P2S bed is 256, so it prints as two halves,
 // split down the middle, glued on a solid seam wall and located by pins.
+// The split falls under the tablet; a fine reveal groove round the outside
+// makes the line that does show read as a parting line, not a glue joint.
 //
 //   openscad -D 'part="left"'  -o tablet-dock-left.stl  dock.scad
 //   openscad -D 'part="right"' -o tablet-dock-right.stl dock.scad
@@ -27,29 +35,41 @@ tab_t     = 7.4;
 tab_r     = 6.0;    // pocket corner radius. Smaller than the tablet's own
                     // corner is safe; larger would hit it. Unmeasured.
 clear     = 0.4;    // per side, round the tablet
-flush     = 0.2;    // extra depth: the glass sits this far below the face
-lean      = 15;     // degrees back from vertical
+flush     = 2.0;    // the bezel: the glass sits this far below the face
+lean      = 17;     // degrees back from vertical
 
 /* [Pocket floor relief] */
 rim       = 12;     // width of the ledge the tablet's back rests on
 relief    = 1.5;    // how much deeper the floor is inside the rim
 
-/* [Side bays] Open slots beside each short edge, full depth. They are
-   where the right-angle USB-C plug sits, where the edge speakers breathe,
-   and what you grip to lift the tablet out. The pocket's corners stay
-   closed (bay_end from each corner) so the tablet is still located. */
-bay_w     = 12;     // past the tablet's edge. A sideways right-angle USB-C
-                    // head stands ~9-10 mm off the port.
+/* [Side chambers] Hidden behind the bezel beside each short edge, open to
+   the tablet's edge below the bezel. The speakers fire into them and out
+   of the flank grilles; the port side also holds the magnetic adapter and
+   the cable. The pocket's corners stay closed (bay_end from each corner)
+   so the tablet is still located. */
+bay_w     = 15;     // past the tablet's edge
 bay_end   = 20;     // closed pocket wall kept at each corner
+skin_t    = 1.2;    // the bezel over the chambers: thinner than flush so
+                    // an adapter thicker than the tablet still fits
+grille_d  = 3;      // flank grille holes
+grille_p  = 6;      // their pitch, along the edge
 
-/* [Cable] The plug's cable turns DOWN the bay, through the lip to the
-   bench, and back along a groove under the base to the rear exit.
-   Every part of that path is open to the front or to the bench, so the
-   cable lays in; nothing has to be threaded. */
-port_side = 1;      // +1 = right-hand bay (looking at the screen), -1 = left
-cable_d   = 4.6;    // channel through the lip, round a ~3.5-4 mm cable
-cable_neck = 3.6;   // pinch at the mouth of the channel, so it stays put
-groove_d  = 5.0;    // groove under the base, depth = width
+/* [Magnetic adapter] Adafruit 5521. Its size is NOT published: these are
+   estimates. Measure the real one, set these, print the coupon. */
+port_side = 1;      // +1 = right-hand chamber (looking at the screen), -1 = left
+port_y    = 0;      // the port's height along the short edge, from its middle
+nub_proud = 2.0;    // how far the nub stands off the tablet's edge
+nub_l     = 12;     // the nub's length along the edge
+ad_l      = 26;     // adapter body: along the edge
+ad_w      = 12;     // off the edge (the nub's face to the far side)
+ad_t      = 8.0;    // thickness, front to back
+
+/* [Cable] Down the chamber below the adapter, then a duct through the
+   body to the back. The duct takes the cable's far plug: thread it from
+   the chamber end before the adapter goes in. */
+duct_d    = 14;     // fits a USB-C plug's overmold; USB-A needs 17
+scoop_w   = 34;     // finger scoop in the top edge
+reveal    = 0.8;    // the parting-line groove round the seam: width = depth
 
 /* [Surround] */
 frame_w   = 3.5;    // lip beyond the pocket and bays, as on Rev N
@@ -82,7 +102,9 @@ face_h   = pocket_h + 2 * frame_w;
 h_dock   = lip_h + face_h * cos(lean);
 bay_h    = pocket_h - 2 * bay_end;
 
-assert(bay_h > 60, "bays too short to reach the port");
+assert(bay_h > 60, "chambers too short to reach the port");
+assert(ad_w + nub_proud + 0.4 < bay_w, "adapter does not fit the chamber");
+assert(ad_t / 2 <= flush + tab_t / 2 - skin_t - 0.1, "adapter too thick: hits the bezel skin");
 assert(rim * 2 < pocket_h, "rim wider than the pocket");
 
 function front_x(y) = (y - lip_h) * tan(lean);
@@ -180,8 +202,10 @@ module front_backing() {
 
 // The solid round the cable's way down: the channel cuts through the front
 // wall and lip, and the cavity must not open into it.
+// The solid round the duct, and a web from it down to the floor: the duct
+// crosses the hollow body, and its underside would otherwise print on air.
 module cable_jacket() {
-    cable_path(cable_d + 2 * wall, groove_d + wall);
+    cable_path(duct_d + 2 * wall, down = true);
 }
 
 module cavity() {
@@ -205,7 +229,12 @@ module shell() {
     }
 }
 
-// ---- the front: pocket, relief, bays --------------------------------
+// ---- the front: pocket, relief, hidden chambers ---------------------
+// In the face frame (on_face): x is depth behind the face, y up the face,
+// z across the dock.
+chamber_d = flush + tab_t + relief;          // chamber floor, level with the relief
+bay_z     = port_side * (pocket_w / 2 + bay_w / 2);
+
 module pocket() {
     on_face(face_h / 2) {
         translate([pocket_t / 2 - eps, 0, 0])
@@ -213,51 +242,93 @@ module pocket() {
         // relief inside the rim, for the camera bump
         translate([pocket_t + relief / 2 - eps, 0, 0])
             rbox(relief + 2 * eps, pocket_h - 2 * rim, pocket_w - 2 * rim, tab_r);
-        // side bays, open into the pocket along the short edges
+        // the chambers: behind the bezel skin, open to the pocket
         for (s = [-1, 1])
-            translate([pocket_t / 2 - eps, 0, s * (pocket_w / 2 + bay_w / 2 - 1)])
-                rbox(pocket_t + 2 * eps, bay_h, bay_w + 2, 3);
+            translate([(skin_t + chamber_d) / 2, 0, s * (pocket_w / 2 + bay_w / 2 - 1)])
+                rbox(chamber_d - skin_t, bay_h, bay_w + 2, 3);
+        // the nub's way in: it drops past the bezel beside the tablet's edge
+        translate([skin_t / 2 - eps, port_y, port_side * (pocket_w / 2 + (nub_proud + 0.8) / 2 - 0.5)])
+            rbox(skin_t + 4 * eps, nub_l + 2, nub_proud + 1.3, 0.8);
+        // finger scoop, centred in the top edge
+        translate([0, pocket_h / 2 - 2, 0])
+            scale([1, 10 / (scoop_w / 2), 1])
+                sphere(d = scoop_w, $fn = 48);
     }
 }
 
-// ---- cable path ------------------------------------------------------
-// From the bottom of the port bay, straight down through the bottom frame
-// and the lip to the bench, then a groove under the base to the back edge.
-//
-// In the face's frame the bay's lower end is at d = face_h/2 - bay_h/2;
-// the channel runs from there down to below the bench, at the bay's centre
-// across the dock and pocket_t/2 behind the face - the middle of the plug.
-bay_z = port_side * (pocket_w / 2 + bay_w / 2);
+// Flank grilles: rows of holes through each flank into its chamber, down
+// the middle of its depth, spread over the chamber's length - the
+// speakers' positions along the edge are not published.
+module grilles() {
+    on_face(face_h / 2)
+        for (s = [-1, 1])
+            for (y = [-bay_h / 2 + 10 : grille_p : bay_h / 2 - 10])
+                for (x = [skin_t + 2.4, chamber_d - 2.4])
+                    translate([x, y, s * (pocket_w / 2 + bay_w)])
+                        cylinder(d = grille_d, h = 40, center = true, $fn = 16);
+}
 
-back_z = port_side * (dock_w / 2 - taper - 24);
+// ---- cable path ------------------------------------------------------
+// The duct: from the floor of the port chamber, low down, through the body
+// to an exit low on the back. It goes in from the chamber's floor so the
+// cable's turn into it is out of sight behind the bezel. It runs straight
+// back beside the pocket first, and only turns in once it is well behind
+// the pocket floor - turning sooner opened it into the pocket.
 
 // world (x, y) of a point d up the face and k behind it
 function face_pt(d, k) = [d * sin(lean) + k * cos(lean), lip_h + d * cos(lean) - k * sin(lean)];
 
-module cable_path(d, gd) {
-    p0 = face_pt(face_h / 2 - bay_h / 2 + 4, pocket_t / 2);   // inside the bay
-    p1 = [p0[0], -5];                                         // straight down, past the bench
-    // down through the frame and lip
+duct_z = port_side * (dock_w / 2 - taper - duct_d);
+duct_up = face_h / 2 - bay_h / 2 + duct_d / 2 + 2;   // up the face, at the chamber's foot
+
+module cable_path(d, down = false, $fn = 32) {
+    // centre 1 mm behind the chamber floor: a ~14 mm mouth into the chamber
+    p0 = face_pt(duct_up, chamber_d + duct_d / 2 - 6);
+    p1 = face_pt(duct_up, chamber_d + duct_d / 2 + 12);  // clear of the pocket
+    p2 = [base_d + 10, duct_d / 2 + 6];                  // out of the back
     hull() {
         translate([p0[0], p0[1], bay_z]) sphere(d = d);
         translate([p1[0], p1[1], bay_z]) sphere(d = d);
+        if (down) for (p = [p0, p1]) translate([p[0], 0, bay_z]) cube([d, eps, d], center = true);
     }
-    // under the base, angled in to the rear edge: the flanks taper, so
-    // the bay's own line would come out through the side of the back
     hull() {
-        translate([p0[0], -eps, bay_z - gd / 2]) cube([gd, gd, gd]);
-        translate([base_d - gd + 10, -eps, back_z - gd / 2]) cube([gd, gd, gd]);
+        translate([p1[0], p1[1], bay_z]) sphere(d = d);
+        translate([p1[0] + 10, p1[1], duct_z]) sphere(d = d);
+        if (down) {
+            translate([p1[0], 0, bay_z]) cube([d, eps, d], center = true);
+            translate([p1[0] + 10, 0, duct_z]) cube([d, eps, d], center = true);
+        }
+    }
+    hull() {
+        translate([p1[0] + 10, p1[1], duct_z]) sphere(d = d);
+        translate([p2[0], p2[1], duct_z]) sphere(d = d);
+        if (down) for (x = [p1[0] + 10, p2[0]]) translate([x, 0, duct_z]) cube([d, eps, d], center = true);
     }
 }
 
-// The channel through the lip is open to the front: the cable presses in
-// past a neck rather than being threaded down a hole.
 module cable_cut() {
-    cable_path(cable_d, groove_d);
-    p0 = face_pt(face_h / 2 - bay_h / 2 + 4, pocket_t / 2);
-    hull() {
-        translate([p0[0] - 20, p0[1], bay_z]) rotate([0, 90, 0]) cylinder(d = cable_neck, h = 20);
-        translate([p0[0] - 20, -5, bay_z]) rotate([0, 90, 0]) cylinder(d = cable_neck, h = 20);
+    cable_path(duct_d);
+}
+
+// The adapter, as a block, for renders and the fit check: its magnetic
+// face against the nub, centred on the port, the body running down the
+// edge, front-to-back centred on the tablet's thickness.
+module adapter() {
+    on_face(face_h / 2)
+        translate([flush + tab_t / 2, port_y - ad_l / 2 + nub_l / 2,
+                   port_side * (pocket_w / 2 - clear + nub_proud + 0.2 + ad_w / 2)])
+            cube([ad_t, ad_l, ad_w], center = true);
+}
+
+// The parting line: a shallow groove round the outside on the seam.
+module reveal_cut() {
+    difference() {
+        translate([-50, -50, -reveal / 2]) cube([base_d + 100, h_dock + 100, reveal]);
+        intersection() {
+            translate([0, 0, -dock_w]) linear_extrude(height = 2 * dock_w)
+                offset(delta = -reveal) polygon(profile);
+            taper_block(reveal);
+        }
     }
 }
 
@@ -294,20 +365,34 @@ module dock() {
             intersection() { cable_jacket(); body(); taper_block(); }
         }
         pocket();
+        grilles();
         cable_cut();
         feet();
         pins();
+        reveal_cut();
     }
 }
 
-// A corner of the real thing, 30 minutes of filament: the bottom of the
-// port-side bay with its pocket corner, the rim and the start of the cable
-// channel. Drop the tablet's corner in and plug the cable in: does it sit
-// flush, does the plug fit the bay, does the cable press into the channel.
+// The port side of the face, about 30 g: the front wall only, from the
+// chamber's foot to past the port - the chamber, the nub's notch, the bezel
+// and a run of grille. Put the adapter in, plug a cable into it, drop the
+// tablet's edge in: does the nub find the adapter, does the bezel hide it,
+// does the plug and its cable fit down the chamber. Printed face up, lying
+// on the back of the front wall; it leaves out the duct.
+coupon_lo = -bay_h / 2 - 4;
+coupon_hi = port_y + nub_l / 2 + 14;
 module coupon_block() {
-    on_face(face_h / 2 - pocket_h / 2 + 25)
-        translate([-20, 0, port_side * (dock_w / 2 - 35)])
-            cube([140, 70, 70], center = true);
+    on_face(face_h / 2)
+        // from in front of the face to 0.3 short of the wall's back: a cut
+        // exactly on either surface left the STL non-manifold
+        translate([(front_t - 0.3 - 2) / 2, (coupon_lo + coupon_hi) / 2, port_side * (dock_w / 2 - 17)])
+            cube([front_t - 0.3 + 2, coupon_hi - coupon_lo, 36], center = true);
+}
+// the face frame laid flat: depth down, face at the top, back on the plate
+module coupon_print() {
+    translate([0, 0, front_t - 0.3]) rotate([0, 90, 0])
+        rotate([0, 0, lean]) translate(-[(face_h / 2) * sin(lean), lip_h + (face_h / 2) * cos(lean), 0])
+            children();
 }
 
 // part = "assembled"  the whole dock, y up - for checks and renders
@@ -327,7 +412,7 @@ if (part == "left")        rotate([90, 0, 0]) half(-1);
 // first export (translated +120) overlapped the left half - Orca merged the
 // two into one object. Side by side the pair takes 192 x 150 of the plate.
 else if (part == "right")  translate([100, 150, 0]) rotate([90, 0, 0]) half(1);
-else if (part == "coupon") rotate([90, 0, 0]) intersection() { dock(); coupon_block(); }
+else if (part == "coupon") coupon_print() intersection() { dock(); coupon_block(); }
 else if (part == "assembled") dock();
 
 // The tablet as a block, for the fit check and renders: in the pocket,
@@ -341,5 +426,7 @@ module tablet() {
 // shrunk 0.05 mm all round: its back RESTS on the rim, and touching faces
 // would otherwise show up as a zero-volume "interference"
 if (part == "fit") intersection() { dock(); on_face(face_h / 2) translate([flush + tab_t / 2, 0, 0]) rbox(tab_t - 0.1, tab_h - 0.1, tab_w - 0.1, tab_r); }
+if (part == "adapter") intersection() { dock(); adapter(); }
+if (part == "tablet") rotate([90, 0, 0]) tablet();
 if (part == "show") rotate([90, 0, 0]) { color("#e4e5e9") dock(); color("#1a1f28") tablet(); }
 if (part == "bare") rotate([90, 0, 0]) color("#e4e5e9") dock();
