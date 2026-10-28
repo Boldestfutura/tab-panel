@@ -11,6 +11,8 @@ tapered back, recessed feet) at a 17° lean, with a pocket the tablet drops into
 ![front](render-front.png)
 ![back](render-back.png)
 ![empty dock](render-bare.png)
+![side, with the speaker slots](render-side.png)
+![the two halves: key ribs on the left half's glue face](render-keys.png)
 
 ## How it works
 
