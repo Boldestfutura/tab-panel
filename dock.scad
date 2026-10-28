@@ -7,15 +7,19 @@
 // Rev B, "one finished product": the tablet sits in a pocket on a 17 degree
 // face, its glass a little below a bezel that runs all round. Behind the
 // bezel at each short edge is a hidden chamber: the tablet's edge speakers
-// fire into it and out through a grille in each flank. Power is a magnetic
+// fire into it and out through slots in each flank. Power is a magnetic
 // right-angle USB-C adapter (Adafruit 5521) captive in the port-side
 // chamber: drop the tablet in and its nub snaps on, lift it out and it lets
 // go. The cable runs down that chamber and through a duct inside the body
-// to an exit low on the back. Nothing shows from the front. Lift the
-// tablet out by the scoop in the top edge.
+// to an exit low on the back. Nothing shows from the front.
+//
+// To take the tablet out, press its bottom edge: the floor under the bottom
+// strip is relieved, so the tablet rocks on the ends of the side rims and
+// its top tips out of the pocket.
 //
 // It is ~307 mm wide and the P2S bed is 256, so it prints as two halves,
-// split down the middle, glued on a solid seam wall and located by pins.
+// split down the middle, glued on a solid seam wall and keyed: one half
+// carries two tapered ribs, the other the matching grooves.
 // The split falls under the tablet; a fine reveal groove round the outside
 // makes the line that does show read as a parting line, not a glue joint.
 //
@@ -42,6 +46,14 @@ lean      = 17;     // degrees back from vertical
 rim       = 12;     // width of the ledge the tablet's back rests on
 relief    = 1.5;    // how much deeper the floor is inside the rim
 
+/* [Push to release] The bottom rim is cut away: the tablet rests on the
+   side and top rims only, its bottom strip over a well. Press that strip
+   and the tablet pivots on the lower ends of the side rims; the top swings
+   out by tilt_w * (tab_h - tilt_a) / tilt_a, about 20 mm. Taps on the
+   screen above the pivot press it onto the rims and do nothing. */
+tilt_a    = 12;     // pivot, up from the pocket's bottom edge
+tilt_w    = 1.5;    // well depth below the rim
+
 /* [Side chambers] Hidden behind the bezel beside each short edge, open to
    the tablet's edge below the bezel. The speakers fire into them and out
    of the flank grilles; the port side also holds the magnetic adapter and
@@ -51,8 +63,9 @@ bay_w     = 15;     // past the tablet's edge
 bay_end   = 20;     // closed pocket wall kept at each corner
 skin_t    = 1.2;    // the bezel over the chambers: thinner than flush so
                     // an adapter thicker than the tablet still fits
-grille_d  = 3;      // flank grille holes
-grille_p  = 6;      // their pitch, along the edge
+slot_w    = 2.2;    // flank grille slots: width
+slot_l    = 24;     // length of each, along the edge
+slot_gap  = 6;      // the rib between one slot and the next
 
 /* [Magnetic adapter] Adafruit 5521. Its size is NOT published: these are
    estimates. Measure the real one, set these, print the coupon. */
@@ -68,7 +81,6 @@ ad_t      = 8.0;    // thickness, front to back
    body to the back. The duct takes the cable's far plug: thread it from
    the chamber end before the adapter goes in. */
 duct_d    = 14;     // fits a USB-C plug's overmold; USB-A needs 17
-scoop_w   = 34;     // finger scoop in the top edge
 reveal    = 0.8;    // the parting-line groove round the seam: width = depth
 
 /* [Surround] */
@@ -83,9 +95,10 @@ flare     = 1.35;
 
 /* [Build] */
 wall      = 2.4;
-seam_t    = 4;      // solid wall each side of the split, the glue face
-pin_d     = 4.2;    // alignment pin holes: 4 mm steel dowel or printed pin
-pin_deep  = 4;      // into each half - inside the seam wall
+seam_t    = 6;      // solid wall each side of the split, the glue face
+key_w     = 8;      // key ribs: width at the seam face
+key_h     = 3;      // how far they stand off it; 45 degree sides
+key_c     = 0.2;    // clearance in the grooves
 foot_d    = 22;
 foot_deep = 1.2;
 
@@ -249,23 +262,29 @@ module pocket() {
         // the nub's way in: it drops past the bezel beside the tablet's edge
         translate([skin_t / 2 - eps, port_y, port_side * (pocket_w / 2 + (nub_proud + 0.8) / 2 - 0.5)])
             rbox(skin_t + 4 * eps, nub_l + 2, nub_proud + 1.3, 0.8);
-        // finger scoop, centred in the top edge
-        translate([0, pocket_h / 2 - 2, 0])
-            scale([1, 10 / (scoop_w / 2), 1])
-                sphere(d = scoop_w, $fn = 48);
+        // the release well: the bottom rim, cut down below the rim's level
+        translate([pocket_t + tilt_w / 2 - eps, -pocket_h / 2 + tilt_a / 2, 0])
+            cube([tilt_w + 2 * eps, tilt_a + 2 * eps, pocket_w - 2 * tab_r], center = true);
     }
 }
 
-// Flank grilles: rows of holes through each flank into its chamber, down
-// the middle of its depth, spread over the chamber's length - the
-// speakers' positions along the edge are not published.
+// Flank grilles: two columns of slots through each flank into its chamber,
+// running up the face, spread over the chamber's length - the speakers'
+// positions along the edge are not published. Slots, not holes: printed,
+// each one's top bridges only slot_w.
+slot_n = floor((bay_h - 16 + slot_gap) / (slot_l + slot_gap));
 module grilles() {
+    run = slot_n * slot_l + (slot_n - 1) * slot_gap;
     on_face(face_h / 2)
         for (s = [-1, 1])
-            for (y = [-bay_h / 2 + 10 : grille_p : bay_h / 2 - 10])
-                for (x = [skin_t + 2.4, chamber_d - 2.4])
-                    translate([x, y, s * (pocket_w / 2 + bay_w)])
-                        cylinder(d = grille_d, h = 40, center = true, $fn = 16);
+            for (i = [0 : slot_n - 1])
+                for (x = [skin_t + 2.4, chamber_d - 2.4]) {
+                    y0 = -run / 2 + i * (slot_l + slot_gap) + slot_w / 2;
+                    hull()
+                        for (y = [y0, y0 + slot_l - slot_w])
+                            translate([x, y, s * (pocket_w / 2 + bay_w)])
+                                cylinder(d = slot_w, h = 40, center = true, $fn = 16);
+                }
 }
 
 // ---- cable path ------------------------------------------------------
@@ -332,7 +351,7 @@ module reveal_cut() {
     }
 }
 
-// ---- feet, pins ------------------------------------------------------
+// ---- feet, keys ------------------------------------------------------
 module feet() {
     for (x = [base_d * 0.22, base_d * 0.78])
         for (z = [-dock_w / 2 + 34, dock_w / 2 - 34])
@@ -341,41 +360,47 @@ module feet() {
                     cylinder(h = foot_deep + eps, d = foot_d);
 }
 
-// Three pins across the seam, in the solid seam wall: two just behind the
-// front wall, one low at the back. The front wall itself is only 2.4 mm
-// behind the pocket at the seam - no room for a pin there. 4 mm dowel or a
-// printed pin, plus glue on the whole seam face.
-function pin_pts() = [
-    face_pt(face_h * 0.25, front_t + 5),
-    face_pt(face_h * 0.75, front_t + 5),
-    [base_d * 0.6, 14],
+// Two key ribs across the seam, in the solid seam wall: one up the face
+// just behind the front wall, which fixes front-to-back; one along the base,
+// which fixes up-and-down. Together the halves go together one way only.
+// The left half carries them, the right half the grooves. 45 degree sides,
+// so the ribs print without support and the grooves self-centre. Glue the
+// whole seam face as well.
+function key_runs() = [
+    [face_pt(25, front_t + 6), face_pt(face_h - 30, front_t + 6)],
+    [[20, 10], [base_d - 14, 10]],
 ];
 
-module pins() {
-    for (p = pin_pts())
-        translate([p[0], p[1], -pin_deep])
-            cylinder(d = pin_d, h = 2 * pin_deep);
+// c = 0 is the rib; c = key_c the groove, a little bigger and deeper
+module keys(c = 0) {
+    for (r = key_runs())
+        hull()
+            for (p = r)
+                translate([p[0], p[1], -0.5])
+                    cylinder(d1 = key_w + 2 * c, d2 = key_w - 2 * key_h + 2 * c,
+                             h = key_h + 0.5 + 2 * c, $fn = 32);
 }
 
 // ---- the dock --------------------------------------------------------
-module dock() {
+// slots = false for the coupon: printed flat, each slot's roof would be a
+// 24 mm bridge. In the halves, printed upright, it is only slot_w.
+module dock(slots = true) {
     difference() {
         union() {
             shell();
             intersection() { cable_jacket(); body(); taper_block(); }
         }
         pocket();
-        grilles();
+        if (slots) grilles();
         cable_cut();
         feet();
-        pins();
         reveal_cut();
     }
 }
 
 // The port side of the face, about 30 g: the front wall only, from the
 // chamber's foot to past the port - the chamber, the nub's notch, the bezel
-// and a run of grille. Put the adapter in, plug a cable into it, drop the
+// (no grille: see dock()). Put the adapter in, plug a cable into it, drop the
 // tablet's edge in: does the nub find the adapter, does the bezel hide it,
 // does the plug and its cable fit down the chamber. Printed face up, lying
 // on the back of the front wall; it leaves out the duct.
@@ -401,19 +426,23 @@ module coupon_print() {
 part = "assembled";
 
 module half(s) {
-    intersection() {
-        dock();
-        translate([-50, -50, s > 0 ? 0 : -dock_w]) cube([base_d + 100, h_dock + 100, dock_w]);
+    module cut() {
+        intersection() {
+            dock();
+            translate([-50, -50, s > 0 ? 0 : -dock_w]) cube([base_d + 100, h_dock + 100, dock_w]);
+        }
     }
+    if (s < 0) union() { cut(); keys(); }
+    else difference() { cut(); keys(key_c); }
 }
 
 if (part == "left")        rotate([90, 0, 0]) half(-1);
-// beside the left half, not over it: rotated, it spans y -150..0, and the
-// first export (translated +120) overlapped the left half - Orca merged the
-// two into one object. Side by side the pair takes 192 x 150 of the plate.
-else if (part == "right")  translate([100, 150, 0]) rotate([90, 0, 0]) half(1);
-else if (part == "coupon") coupon_print() intersection() { dock(); coupon_block(); }
+// beside the left half, not over it: an export that overlapped the left
+// half had Orca merge the two into one object.
+else if (part == "right")  translate([100, dock_w / 2 + 10, 0]) rotate([90, 0, 0]) half(1);
+else if (part == "coupon") coupon_print() intersection() { dock(slots = false); coupon_block(); }
 else if (part == "assembled") dock();
+else if (part == "keyfit") intersection() { half(-1); half(1); }
 
 // The tablet as a block, for the fit check and renders: in the pocket,
 // face `flush` below the dock's front, resting on the rim.

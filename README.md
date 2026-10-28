@@ -22,9 +22,12 @@ tapered back, recessed feet) at a 17° lean, with a pocket the tablet drops into
   position isn't published, so this lets it sit anywhere.
 - **Hidden chambers.** Beside each short edge, behind a 1.2 mm skin of bezel, is a
   15 mm chamber that opens onto the tablet's edge below the glass. The edge speakers fire
-  into it and out through a **grille of holes in each flank**. The corners stay solid, so
-  the tablet is still located.
-- **Lift-out scoop.** A finger scoop in the middle of the top edge.
+  into it and out through **slots in each flank**: two columns of four, running up the
+  face. The corners stay solid, so the tablet is still located.
+- **Push to release.** The bottom rim is cut away, leaving a 1.5 mm well behind the
+  tablet's bottom 12 mm. Press the tablet's bottom edge and it pivots on the lower ends of
+  the side rims, and the top tips about 20 mm out of the pocket, ready to grab. Taps on the
+  screen above the pivot just press it onto the rims.
 
 ### Power: magnetic, hidden
 
@@ -54,18 +57,19 @@ middle. Each half is 92 × 153 × 178 mm and prints base-down without supports. 
 reach over air is 10.8 mm, measured by `printcheck.py`, against a 15 mm limit. A solid web
 runs from the cable duct down to the floor so the duct has something under it.
 
-- **Joining.** Each half has a 4 mm solid seam wall as the glue face, with three 4.2 mm pin
-  holes, 4 mm deep each side. Use 4 mm steel dowels or printed pins, and glue the whole
-  seam.
+- **Joining.** Each half has a 6 mm solid seam wall as the glue face. The left half carries
+  two **key ribs** (8 mm wide, 3 mm tall, 45° sides): one up the face, which fixes
+  front-to-back, and one along the base, which fixes up-and-down. The right half has the
+  matching grooves, 0.2 mm larger. They go together one way only. Glue the whole seam.
 - **The seam.** It runs under the tablet. Where it does show (the lip, the top, the back),
   a 0.8 mm groove sits on it, so it reads as a parting line rather than a glue joint.
-- **Weight.** About 310 g of PLA for the left half and 355 g for the right by volume. The
+- **Weight.** About 330 g of PLA for the left half and 365 g for the right by volume. The
   slicer's infill brings that down.
 
 | File | What |
 |---|---|
 | `tab-dock-left.stl`, `tab-dock-right.stl` | the two halves, print orientation |
-| `tab-dock-coupon.stl` | the port-side chamber and bezel, ~15 g, prints flat. **Print this first** |
+| `tab-dock-coupon.stl` | the port-side chamber and bezel, ~16 g, prints flat, no slots. **Print this first** |
 
 ### Print the coupon first
 
@@ -97,6 +101,7 @@ python3 check.py tab-dock-*.stl          # manifold, volume, bbox
 python3 printcheck.py tab-dock-*.stl     # reach over air, layer by layer
 openscad -D 'part="fit"' -o fit.stl dock.scad       # must say "top level object is empty"
 openscad -D 'part="adapter"' -o ad.stl dock.scad    # must say "top level object is empty"
+openscad -D 'part="keyfit"' -o kf.stl dock.scad     # zero volume: the halves only touch on the seam
 ```
 
 `part="fit"` intersects the dock with a tablet-sized block in the pocket, and
