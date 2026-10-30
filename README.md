@@ -1,13 +1,18 @@
 # tab-panel
 
-A 3D-printed bench dock for a **Lenovo Legion Tab (8.8", Gen 3)** running a Home Assistant
+A 3D-printed bench dock for an **ALLDOCUBE iPlay 80 mini Turbo (8.8")** running a Home Assistant
 dashboard. Slide the tablet in and it charges. From the front there's no cable, no plug
 and no gap: just the tablet in an even bezel. It prints **in one piece**.
 
 It's forked from [pi-panel](https://github.com/Boldestfutura/pi-panel), the dock for a
 Waveshare 10.1" panel and a Raspberry Pi 4B, and keeps that body: soft flanks, a tapered
-back and recessed feet, at a 17° lean. (It was drawn for an 11" Tab P11 first. Beside a 7"
-Nest Hub that was far too big; it's in the git history.)
+back and recessed feet, at a 17° lean. (It was drawn for an 11" Tab P11 first, which was far
+too big beside a 7" Nest Hub, then for the Lenovo Legion Tab 8.8 Gen 3. The Legion version is
+tagged [`legion-tab-8.8`](../../tree/legion-tab-8.8).)
+
+There's also an experimental Echo Show-style enclosure on the
+[`echo-style`](../../tree/echo-style) branch: a block with a press-on bezel. It's there in
+case this one doesn't work out.
 
 ![front](render-front.png)
 ![back](render-back.png)
@@ -16,15 +21,18 @@ Nest Hub that was far too big; it's in the git history.)
 
 ## The tablet
 
-From Lenovo's [PSREF](https://psref.lenovo.com/Product/Lenovo_Tablets/Legion_Tab_8_8_3):
-208.54 × 129.46 × 7.79 mm, about 350 g. Held landscape with the buttons on top:
+ALLDOCUBE's figures: 208.2 × 129.2 × 6.95 mm, 295 g. Almost the Legion's outline, 0.8 mm
+thinner. Held landscape **with the USB-C on the left**:
 
-- the **charging USB-C (Hi-Speed)** is in the middle of the **right-hand short edge**. That's
-  the one the magnetic nub goes in;
-- the second USB-C (10 Gbps, DP out) is in the middle of the bottom edge. The pocket
-  covers it and it isn't used. Lenovo says the two can't charge at once anyway;
-- the power and volume buttons are on the top edge, under the top bezel. Wake the
-  screen by touch or from Home Assistant.
+- the only **USB-C** (USB 2.0, 20 W) is in the middle of the **left-hand short edge**. The
+  magnetic nub goes in it;
+- the **power and volume keys** are on a long edge near the camera end. Port on the left puts
+  them on the top edge, under the top bezel. Port on the right would put them on the bottom
+  edge, and the tablet's weight would rest on the power key. Wake it by touch (double-tap
+  or raise-to-wake) or from Home Assistant;
+- there's a **speaker grille on each short edge**, so the side chambers still carry the sound;
+- the **camera is a Pixel-style bar** across the camera end of the back, which is the right
+  end seen from the screen.
 
 ## How it works
 
@@ -33,19 +41,20 @@ From Lenovo's [PSREF](https://psref.lenovo.com/Product/Lenovo_Tablets/Legion_Tab
   17° lean and the pocket walls hold the tablet, with nothing to clip.
 - **Rim and relief.** The tablet's back rests on a 12 mm rim. Inside the rim the floor is
   1.5 mm deeper.
-- **Camera recess.** The rear camera module sits in the top-left corner (seen from the
-  screen side) and overlaps the rim, so it gets its own recess: 2.6 mm below the rim, 5 mm
-  bigger than the bump all round. Without it the tablet would sit on its camera and rock.
-  Lenovo doesn't dimension the bump; it's scaled off the edge views in the PSREF drawing,
-  about 46 × 29 mm and 1.6–1.9 mm proud (`cam_*` in `dock.scad`). The front wall is
-  thickened behind it, so the wall there is as thick as anywhere else.
+- **Camera recess and rib.** The camera bar runs nearly the full height of the right end,
+  so it gets its own recess, 5.2 mm below the rim and 3 mm bigger than the bar all round.
+  That takes out the right rim, so an **8 mm rib** is left standing just inboard of the
+  recess to carry that end. The bar's size isn't published. It's scaled off ALLDOCUBE's
+  renders: about 118 × 29 mm, 7.6 mm in from the end, lens rings about 4.5 mm proud
+  (`cam_*` in `dock.scad`). The front wall is thickened behind it, so the wall there is as
+  thick as anywhere else.
 - **Hidden chambers.** Beside each short edge, behind a 1.2 mm skin of bezel, is a
   15 mm chamber that opens onto the tablet's edge below the glass. The speakers fire into
   it and out through **slots in each flank**, running up the face. The corners stay
   solid, so the tablet is still located.
 - **Push to release.** The bottom rim is cut away, leaving a 1.5 mm well behind the
   tablet's bottom 12 mm. Press the tablet's bottom edge and it pivots on the lower ends of
-  the side rims, and the top tips about 15 mm out of the pocket, ready to grab. Taps on the
+  the left rim and the camera rib, and the top tips about 15 mm out of the pocket, ready to grab. Taps on the
   screen above the pivot just press it onto the rims.
 
 ### Docking: slide it on
@@ -53,12 +62,12 @@ From Lenovo's [PSREF](https://psref.lenovo.com/Product/Lenovo_Tablets/Legion_Tab
 The bezel is unbroken all round, so the magnetic nub, which stands 2 mm off the tablet's
 edge, can't drop through it. The tablet slides instead:
 
-- **In:** tuck the left end about 3 mm under the left bezel, lower the right end into
-  the pocket, then slide it right. The magnet snaps on.
-- **Out:** slide it left about 3 mm, which parts the magnet, then press the bottom edge to
+- **In:** tuck the right end about 3 mm under the right bezel, lower the left end into
+  the pocket, then slide it left. The magnet snaps on.
+- **Out:** slide it right about 3 mm, which parts the magnet, then press the bottom edge to
   tip it out.
 
-There is a 3 mm recess under the left bezel, the full height of the pocket, for the
+There is a 3 mm recess under the right bezel, the full height of the pocket, for the
 tucked end. It's hidden once the tablet is home.
 
 ### Power: magnetic, hidden
@@ -66,7 +75,7 @@ tucked end. It's hidden once the tablet is home.
 Power goes through an **[Adafruit 5521](https://www.adafruit.com/product/5521) magnetic
 right-angle USB-C adapter** (120 W, data as well; Core Electronics stocks it as ADA5521).
 
-- A small nub lives in the tablet's USB-C port. The adapter sits in the right-hand
+- A small nub lives in the tablet's USB-C port. The adapter sits in the left-hand
   chamber, its magnetic face against the tablet's edge, hidden behind the bezel. Slide the
   tablet home and the nub snaps onto it.
 - Any **straight USB-C cable** plugs into the adapter's other end. It runs down the
@@ -75,7 +84,7 @@ right-angle USB-C adapter** (120 W, data as well; Core Electronics stocks it as 
 - **Fitting it:** before the adapter goes in, feed the cable's far plug in at the bottom of
   the chamber and out of the back. Then plug the adapter on and sit it in the chamber.
 - The duct takes a USB-C plug. A USB-A plug needs `duct_d = 17`.
-- Lenovo wants a USB-PD charger of at least 15 W; 45 W or more charges it at full speed.
+- It charges at up to 20 W, so any USB-PD charger of 20 W or more is plenty.
 
 The adapter's size isn't published. `ad_l`, `ad_w`, `ad_t`, `nub_proud` and `nub_l` are
 estimates. **Measure the real adapter and set them before printing the dock.** The model
@@ -87,18 +96,18 @@ too thick to fit.
 It's 246 × 80 × 140 mm, which fits the P2S's 256 mm bed, so it **prints in one piece**,
 base down, without supports. The worst reach over air is 10.8 mm, measured by
 `printcheck.py`, against a 15 mm limit. A solid web runs from the cable duct down to the
-floor, so the duct has something under it. About 450 g of PLA by volume; the slicer's
+floor, so the duct has something under it. About 540 g of PLA by volume; the slicer's
 infill brings that down.
 
 | File | What |
 |---|---|
 | `tab-dock.stl` | the dock, print orientation |
-| `tab-dock-coupon.stl` | the right-hand chamber and bezel, ~13 g, prints flat, no slots. **Print this first** |
+| `tab-dock-coupon.stl` | the left-hand chamber and bezel, ~23 g, prints flat, no slots. **Print this first** |
 
 ### Print the coupon first
 
 No dimension here has been checked against a real tablet or adapter. The coupon is the
-right-hand side of the face, from the bottom of the chamber to past the port. Check that:
+left-hand side of the face, from the bottom of the chamber to past the port. Check that:
 
 1. the adapter fits the chamber and the bezel hides it,
 2. with a cable plugged into the adapter, the plug and cable fit down the chamber,
@@ -109,14 +118,17 @@ right-hand side of the face, from the bottom of the chamber to past the port. Ch
 
 These aren't published, and the design assumes them:
 
-- **The camera bump** is inside the recess, and is no more than ~2.5 mm proud. The fit
-  checks model it, but the numbers are from a drawing.
+- **The camera bar** fits the recess: no more than ~124 × 35 mm including its margin,
+  ending at least 4.6 mm from the right end, no more than ~5 mm proud. The fit checks model
+  it, but the numbers are from product renders.
 - **Corner radius ≥ 6 mm.** The pocket's corner is 6 mm. A tighter tablet corner would
   hit it.
-- **Speakers on the short edges.** Lenovo lists two, not where. If they're on the long
-  edges, the frame muffles them.
-- **The port is centred** on its edge (`port_y = 0`), as Lenovo's drawing shows. If not,
-  set `port_y`.
+- **Speakers on the short edges**, between 20 mm and 110 mm along each. Photos show the
+  grilles off-centre, toward one long edge. Grilles outside that span fire into the
+  pocket's solid corners.
+- **The port is centred** on its edge (`port_y = 0`), as photos show. If not, set `port_y`.
+- **The keys end up on top** with the port on the left. If they don't, the tablet's weight
+  is on them: set `port_side = 1`.
 
 ## Rebuilding
 

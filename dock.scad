@@ -1,9 +1,9 @@
 // =====================================================================
-// Bench dock for a Lenovo Legion Tab (8.8", Gen 3), forked from the
+// Bench dock for an ALLDOCUBE iPlay 80 mini Turbo (8.8"), forked from the
 // pi-panel Rev N dock. Same body - soft flanks, tapered back and feet -
 // with the panel's opening, tabs and Pi cavity replaced by a pocket the
-// tablet sits in. (It was drawn for an 11" Tab P11 first; that was too big
-// beside a 7" Nest Hub, and is in the git history.)
+// tablet sits in. (Drawn for an 11" Tab P11 first, then the Lenovo Legion
+// Tab 8.8 Gen 3 - tag legion-tab-8.8. Both are in the git history.)
 //
 // Rev B, "one finished product": the tablet sits in a pocket on a 17 degree
 // face, its glass a little below a bezel that runs all round. Behind the
@@ -29,16 +29,18 @@
 //   then check.py and printcheck.py on both.
 // =====================================================================
 
-/* [Tablet] Lenovo PSREF, Legion Tab (8.8", 3): 208.54 x 129.46 x 7.79 mm,
-   ~350 g. Landscape, power and volume buttons on the top edge, the
-   charging USB-C (Hi-Speed) in the middle of the right-hand short edge -
-   that is the port the magnetic nub goes in. The second USB-C, middle of
-   the bottom edge, is covered by the pocket and not used. The pocket
-   floor is relieved everywhere but a rim - the tablet rests on its edges -
-   and the rear camera bump gets its own deeper recess (below). */
-tab_w     = 208.54;
-tab_h     = 129.46;
-tab_t     = 7.79;
+/* [Tablet] ALLDOCUBE iPlay 80 mini Turbo: 208.2 x 129.2 x 6.95 mm, 295 g
+   (maker's figures; one spec sheet says 7.0 thick). One USB-C, centred on
+   a short edge, with a speaker grille on each short edge. The power and
+   volume keys are on a long edge near the camera end, so the tablet sits
+   with its port on the LEFT (port_side = -1): that puts the keys on the
+   top edge under the bezel. Port on the right would stand the tablet's
+   weight on its power key. The pocket floor is relieved everywhere but a
+   rim - the tablet rests on its edges - and the camera bar gets its own
+   deeper recess (below). */
+tab_w     = 208.2;
+tab_h     = 129.2;
+tab_t     = 6.95;
 tab_r     = 6.0;    // pocket corner radius. Smaller than the tablet's own
                     // corner is safe; larger would hit it. Unmeasured.
 clear     = 0.4;    // per side, round the tablet
@@ -49,19 +51,21 @@ lean      = 17;     // degrees back from vertical
 rim       = 12;     // width of the ledge the tablet's back rests on
 relief    = 1.5;    // how much deeper the floor is inside the rim
 
-/* [Camera bump] Not dimensioned by Lenovo: scaled off the edge views in the
-   PSREF overview drawing (208.54 mm = the long edge). The module sits in
-   the top-left corner seen from the screen side, ~46 x 29 mm, standing
-   ~1.6-1.9 mm off the back. It overlaps the top and left rims, so without
-   this the tablet would sit on its camera and rock. Measured from the
-   tablet's left end and its top edge: */
-cam_x0    = 5.6;    // left end -> near side of the bump
-cam_x1    = 51.4;   // left end -> far side
-cam_y0    = 6;      // top edge -> near side
-cam_y1    = 35;     // top edge -> far side
-cam_h     = 1.9;    // how far it stands off the back
-cam_m     = 5;      // margin round it: the drawing is a render, not a spec
+/* [Camera bar] NOT MEASURED: scaled off ALLDOCUBE's product renders. A
+   Pixel-style bar across the camera end of the back, ~118 x 29 mm, ~7.6 mm
+   in from that end; the lens rings stand ~4.5 mm off the back, the bar
+   itself less. With the port on the left, the camera end is the RIGHT end
+   seen from the screen side, and the bar takes out the whole right rim -
+   so a rib just inboard of it (cam_rib) carries that end instead.
+   Measured from the tablet's left end and its top edge: */
+cam_x0    = 208.2 - 7.6 - 29;   // left end -> near side of the bar
+cam_x1    = 208.2 - 7.6;        // left end -> far side
+cam_y0    = 5.6;    // top edge -> near side
+cam_y1    = 123.6;  // top edge -> far side
+cam_h     = 4.5;    // how far the lens rings stand off the back
+cam_m     = 3;      // margin round it
 cam_d     = cam_h + 0.7;   // recess depth below the rim
+cam_rib   = 8;      // width of the rim left standing just inboard of it
 
 /* [Push to release] The bottom rim is cut away: the tablet rests on the
    side and top rims only, its bottom strip over a well. Press that strip
@@ -86,7 +90,7 @@ slot_gap  = 6;      // the rib between one slot and the next
 
 /* [Magnetic adapter] Adafruit 5521. Its size is NOT published: these are
    estimates. Measure the real one, set these, print the coupon. */
-port_side = 1;      // +1 = right-hand chamber (looking at the screen), -1 = left
+port_side = -1;     // -1 = left-hand chamber (looking at the screen), +1 = right
 port_y    = 0;      // the port's height along the short edge, from its middle
 nub_proud = 2.0;    // how far the nub stands off the tablet's edge
 nub_l     = 12;     // the nub's length along the edge
@@ -129,11 +133,14 @@ dock_w   = pocket_w + 2 * bay_w + 2 * frame_w;
 face_h   = pocket_h + 2 * frame_w;
 h_dock   = lip_h + face_h * cos(lean);
 bay_h    = pocket_h - 2 * bay_end;
+// centre of the rib that stands in for the rim the camera bar takes out
+rib_z    = -tab_w / 2 + cam_x0 - cam_m - cam_rib / 2;
 
 assert(bay_h > 60, "chambers too short to reach the port");
 assert(ad_w + nub_proud + 0.4 < bay_w, "adapter does not fit the chamber");
 assert(ad_t / 2 <= flush + tab_t / 2 - skin_t - 0.1, "adapter too thick: hits the bezel skin");
 assert(rim * 2 < pocket_h, "rim wider than the pocket");
+assert(cam_x0 - cam_m - cam_rib > tab_w / 2, "camera rib past the middle");
 
 function front_x(y) = (y - lip_h) * tan(lean);
 top_front = front_x(h_dock);
@@ -264,9 +271,13 @@ module pocket() {
     on_face(face_h / 2) {
         translate([pocket_t / 2 - eps, 0, 0])
             rbox(pocket_t + 2 * eps, pocket_h, pocket_w, tab_r);
-        // relief inside the rim
-        translate([pocket_t + relief / 2 - eps, 0, 0])
-            rbox(relief + 2 * eps, pocket_h - 2 * rim, pocket_w - 2 * rim, tab_r);
+        // relief inside the rim, less the rib beside the camera bar
+        difference() {
+            translate([pocket_t + relief / 2 - eps, 0, 0])
+                rbox(relief + 2 * eps, pocket_h - 2 * rim, pocket_w - 2 * rim, tab_r);
+            translate([pocket_t, 0, rib_z])
+                cube([2 * relief + 1, pocket_h, cam_rib], center = true);
+        }
         // the camera recess, through the top and left rims
         translate([pocket_t + cam_d / 2 - eps, 0, 0])
             cam_box(cam_d + 2 * eps, cam_m);
@@ -277,8 +288,10 @@ module pocket() {
         // the slide: the whole pocket again, shifted slide_s away from the
         // port, behind the bezel skin - room under the far bezel, full
         // height, for the tablet's far end while the nub clears the near one
-        translate([(skin_t + pocket_t) / 2, 0, -port_side * slide_s])
-            rbox(pocket_t - skin_t, pocket_h, pocket_w, tab_r);
+        // (0.05 behind the skin: level with the chambers' front faces, the
+        // two cuts' outlines crossed there and left the STL non-manifold)
+        translate([(skin_t + 0.05 + pocket_t) / 2, 0, -port_side * slide_s])
+            rbox(pocket_t - skin_t - 0.05, pocket_h, pocket_w, tab_r);
         // the release well: the bottom rim, cut down below the rim's level
         translate([pocket_t + tilt_w / 2 - eps, -pocket_h / 2 + tilt_a / 2, 0])
             cube([tilt_w + 2 * eps, tilt_a + 2 * eps, pocket_w - 2 * tab_r], center = true);
