@@ -77,6 +77,8 @@ two bumps. Check that:
 
 ### Check against the real tablet
 
+**The full measuring list and the next steps are in [TODO.md](TODO.md).**
+
 These come from photos, not the tablet:
 
 - **the camera bar**: about 118 × 29 mm, 7.6 mm from the end, lens rings about 4.5 mm proud;
