@@ -1,7 +1,4 @@
-# tab-panel: Echo Show-style enclosure (experimental)
-
-**This is the `echo-style` branch.** It's an experiment, kept apart in case it doesn't work out.
-The main branch has the tapered slide-in dock for the same tablet.
+# tab-panel
 
 An enclosure for an **ALLDOCUBE iPlay 80 mini Turbo (8.8")** running a Home Assistant dashboard,
 styled after the [Amazon Echo Show Enclosure](https://www.printables.com/model/1769972-amazon-echo-show-enclosure)
@@ -13,19 +10,18 @@ bezel on, and the bezel holds the tablet. Print the bezel in a second colour.
 ![side](render-side.png)
 ![back](render-back.png)
 
-## How it differs from the main dock
-
-| | main: slide-in dock | this branch: enclosure |
-|---|---|---|
-| Shape | tapered back, 17° lean | block, flat top, vertical back, 15° lean |
-| Holding the tablet | gravity in a pocket | a bezel that laps the glass by 1.5 mm |
-| Taking it out | slide, then press to tip | pop the bezel off |
-| Power | Adafruit 5521 magnetic adapter | any sideways right-angle USB-C cable |
-| Speakers | slots in the flanks | Echo-style grilles in the bezel |
-| Parts | one | body, bezel, four feet |
-
 The bezel means the tablet doesn't come out casually. That suits a dashboard that lives in the
 enclosure. It doesn't suit a tablet you pick up every day.
+
+### Earlier designs
+
+tab-panel started as a fork of [pi-panel](https://github.com/Boldestfutura/pi-panel), a stand
+for a Waveshare panel and a Pi. The tapered slide-in docks it went through are retired, but kept
+as tags:
+
+- [`slide-dock`](../../tree/slide-dock): the slide-in dock for this tablet, with a magnetic USB-C
+  adapter and push-to-release;
+- [`legion-tab-8.8`](../../tree/legion-tab-8.8): the same dock for a Lenovo Legion Tab 8.8 Gen 3.
 
 ## The tablet
 
@@ -42,7 +38,7 @@ short edges. The camera is a Pixel-style bar at the right end of the back.
 - **Pocket.** 0.4 mm clear of the tablet all round. The glass sits level with a tenon round the
   face. The tablet's back floats 0.15 mm off a 12 mm rim, and inside the rim the floor is 1 mm
   deeper.
-- **Camera recess and rib.** As on main: the camera bar takes out the right rim, so it gets a
+- **Camera recess and rib.** The camera bar takes out the right rim, so it gets a
   5.2 mm recess, and an 8 mm rib inboard of it carries that end.
 - **Bezel.** A 3 mm plate with a skirt down the sides and over the top, 2 mm thick and 6 mm
   deep. It slides onto the tenon along the face normal with 0.15 mm clearance, and its bottom
@@ -54,17 +50,17 @@ short edges. The camera is a Pixel-style bar at the right end of the back.
   before the tablet goes in. Its head sits in the left chamber. The cable runs down the
   chamber into a 14 mm duct, through the body, and out low on the back. Thread the cable's
   far plug in from the chamber end first. A USB-A plug needs `duct_d = 17`.
-- **Feet.** Four 20 mm recesses in the base take TPU discs (`echo-foot.stl`, print four), or
+- **Feet.** Four 20 mm recesses in the base take TPU discs (`tab-panel-foot.stl`, print four), or
   stick-on feet. Each stands 0.6 mm proud.
 
 ## Printing
 
 | File | What | Orientation |
 |---|---|---|
-| `echo-body.stl` | the body, 245 × 80 × 161 mm, about 700 g of PLA by volume | base down |
-| `echo-bezel.stl` | the bezel, 245 × 156 × 9 mm, about 50 g | face down |
-| `echo-foot.stl` | one foot, TPU | flat, print four |
-| `echo-coupon.stl` | the port end of the body's face and the bezel's matching end. **Print this first** | as laid out |
+| `tab-panel-body.stl` | the body, 245 × 80 × 161 mm, about 700 g of PLA by volume | base down |
+| `tab-panel-bezel.stl` | the bezel, 245 × 156 × 9 mm, about 50 g | face down |
+| `tab-panel-foot.stl` | one foot, TPU | flat, print four |
+| `tab-panel-coupon.stl` | the port end of the body's face and the bezel's matching end. **Print this first** | as laid out |
 
 No supports. `printcheck.py` puts the worst reach over air at
 9.9 mm for the body and 0.6 mm for the bezel, against a 15 mm limit.
@@ -81,7 +77,7 @@ two bumps. Check that:
 
 ### Check against the real tablet
 
-As on main, these come from photos, not the tablet:
+These come from photos, not the tablet:
 
 - **the camera bar**: about 118 × 29 mm, 7.6 mm from the end, lens rings about 4.5 mm proud;
 - **corner radius ≥ 6 mm**;
@@ -95,15 +91,15 @@ edge, 11 mm off it, 6.5 mm thick.
 ## Rebuilding
 
 ```
-openscad -D 'part="body"'   -o echo-body.stl   enclosure.scad
-openscad -D 'part="bezel"'  -o echo-bezel.stl  enclosure.scad
-openscad -D 'part="foot"'   -o echo-foot.stl   enclosure.scad
-openscad -D 'part="coupon"' -o echo-coupon.stl enclosure.scad
-python3 check.py echo-*.stl         # manifold, volume, bbox
-python3 printcheck.py echo-*.stl    # reach over air, layer by layer
-openscad -D 'part="fit"'     -o fit.stl  enclosure.scad   # each of these three must say
-openscad -D 'part="plugfit"' -o plug.stl enclosure.scad   # "top level object is empty"
-openscad -D 'part="mate"'    -o mate.stl enclosure.scad
+openscad -D 'part="body"'   -o tab-panel-body.stl   tab-panel.scad
+openscad -D 'part="bezel"'  -o tab-panel-bezel.stl  tab-panel.scad
+openscad -D 'part="foot"'   -o tab-panel-foot.stl   tab-panel.scad
+openscad -D 'part="coupon"' -o tab-panel-coupon.stl tab-panel.scad
+python3 check.py tab-panel-*.stl    # manifold, volume, bbox
+python3 printcheck.py tab-panel-*.stl   # reach over air, layer by layer
+openscad -D 'part="fit"'     -o fit.stl  tab-panel.scad   # each of these three must say
+openscad -D 'part="plugfit"' -o plug.stl tab-panel.scad   # "top level object is empty"
+openscad -D 'part="mate"'    -o mate.stl tab-panel.scad
 ```
 
 `fit` intersects body and bezel with the tablet, camera bar included. `plugfit` does the same

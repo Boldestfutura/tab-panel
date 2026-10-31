@@ -1,9 +1,9 @@
 // =====================================================================
-// Echo Show-style enclosure for an ALLDOCUBE iPlay 80 mini Turbo (8.8").
-// The experimental fork of tab-panel (branch echo-style). The main branch
-// keeps the tapered slide-in dock; this one is a block with a separate
-// bezel, after the "Amazon Echo Show Enclosure" on Printables (model
-// 1769972): drop the tablet in, press the bezel on.
+// tab-panel: an enclosure for an ALLDOCUBE iPlay 80 mini Turbo (8.8").
+// A block with a separate bezel, after the "Amazon Echo Show Enclosure" on
+// Printables (model 1769972): drop the tablet in, press the bezel on.
+// (It replaced a tapered slide-in dock, tag slide-dock, which grew out of
+// the pi-panel stand and an earlier Legion Tab version, tag legion-tab-8.8.)
 //
 // - The body is a soft-cornered block: 15 degree face, vertical back, flat
 //   top. The tablet sits in a pocket in the face, glass level with a tenon
@@ -18,10 +18,10 @@
 //   cable runs down it and through a duct to an exit low on the back.
 // - The base has four round recesses for TPU feet (part="foot", print four).
 //
-//   openscad -D 'part="body"'   -o echo-body.stl   enclosure.scad
-//   openscad -D 'part="bezel"'  -o echo-bezel.stl  enclosure.scad
-//   openscad -D 'part="foot"'   -o echo-foot.stl   enclosure.scad
-//   openscad -D 'part="coupon"' -o echo-coupon.stl enclosure.scad
+//   openscad -D 'part="body"'   -o tab-panel-body.stl   tab-panel.scad
+//   openscad -D 'part="bezel"'  -o tab-panel-bezel.stl  tab-panel.scad
+//   openscad -D 'part="foot"'   -o tab-panel-foot.stl   tab-panel.scad
+//   openscad -D 'part="coupon"' -o tab-panel-coupon.stl tab-panel.scad
 //   then check.py and printcheck.py on each.
 // =====================================================================
 
@@ -40,7 +40,7 @@ float     = 0.15;   // between the tablet's back and the rim: it is
 rim       = 12;
 relief    = 1.0;
 
-/* [Camera bar] NOT MEASURED: scaled off ALLDOCUBE's renders, as on main.
+/* [Camera bar] NOT MEASURED: scaled off ALLDOCUBE's renders.
    At the right end seen from the screen. From the tablet's left end and
    top edge: */
 cam_x0    = 208.2 - 7.6 - 29;
